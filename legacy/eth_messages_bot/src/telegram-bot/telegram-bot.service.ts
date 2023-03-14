@@ -87,7 +87,6 @@ export class TelegramBotService {
         ).prefetchedTransactions.forEach(async (tx) => {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
-          console.log('txText', txText);
 
           const message = `New transaction received. 
           \nBlock # ${blockNumber} \nTx hash: ${tx.hash}. 
