@@ -86,8 +86,6 @@ export class TelegramBotService {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
-          console.log('txText', txText);
-
           const message = `New transaction received. \nBlock # ${blockNumber} \n Tx hash: ${tx.hash}. \nTx text: ${txText}`;
           this.sendMessage(message);
         });
