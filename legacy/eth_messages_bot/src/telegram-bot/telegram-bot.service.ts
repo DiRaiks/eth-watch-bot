@@ -7,6 +7,18 @@ const wordnet = require('wordnet');
 
 const tokenizer = new WordTokenizer();
 
+const ignoreList = [
+  'Ignore',
+  'BFX_REFILL_SWEEP',
+  'FA%}',
+  'cs',
+  'RM',
+  'Rns_',
+  'W8b%',
+  '$AGI',
+  'c',
+];
+
 @Injectable()
 export class TelegramBotService {
   private readonly bot: Telegraf;
@@ -15,8 +27,8 @@ export class TelegramBotService {
 
   constructor() {
     this.initProvider();
-    this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-    this.initBot();
+    // this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+    // this.initBot();
     this.ethBlockSubscribe();
   }
 
@@ -74,8 +86,10 @@ export class TelegramBotService {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
+          console.log('txText', txText);
+
           const message = `New transaction received. \nBlock # ${blockNumber} \n Tx hash: ${tx.hash}. \nTx text: ${txText}`;
-          this.sendMessage(message);
+          // this.sendMessage(message);
         });
       },
     );
@@ -84,6 +98,8 @@ export class TelegramBotService {
   private decodeBlockMessage = async (message: string) => {
     try {
       const decodedMessage = ethers.toUtf8String(message);
+      if (ignoreList.includes(decodedMessage)) return null;
+
       const words = tokenizer.tokenize(decodedMessage);
       const isValid = await this.isMessageMeaningful(words);
 
@@ -95,14 +111,13 @@ export class TelegramBotService {
   };
 
   private isMessageMeaningful = async (words: string[]) => {
-    try {
-      return words.some(async (word) => {
+    return words.some(async (word) => {
+      try {
         const synsets = await wordnet.lookup(word.toLowerCase());
-
         return synsets.length > 0;
-      });
-    } catch (error) {
-      return false;
-    }
+      } catch (error) {
+        return false;
+      }
+    });
   };
 }
