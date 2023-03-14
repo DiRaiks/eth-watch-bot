@@ -90,10 +90,8 @@ export class TelegramBotService {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
-          const message = `New transaction received. 
-          Block # ${blockNumber} \nTx hash: ${tx.hash}. 
-          Etherscan: https://etherscan.io/tx/${tx.hash}
-          Tx text: ${txText}
+          const message = `
+          New transaction received\nBlock # ${blockNumber}\nTx hash: ${tx.hash}\nEtherscan: https://etherscan.io/tx/${tx.hash}\nTx text: ${txText}
           ------------------------`;
           this.sendMessage(message);
         });
@@ -117,13 +115,15 @@ export class TelegramBotService {
   };
 
   private isMessageMeaningful = async (words: string[]) => {
-    return words.some(async (word) => {
+    for (const word of words) {
+      if (word.length < 2) continue;
+
       try {
         const synsets = await wordnet.lookup(word.toLowerCase());
-        return synsets.length > 0;
+        if (synsets.length > 0) return true;
       } catch (error) {
-        return false;
+        continue;
       }
-    });
+    }
   };
 }
