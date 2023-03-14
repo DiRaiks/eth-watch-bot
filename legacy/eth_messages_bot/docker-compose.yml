@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  main:
+    container_name: main
+    build: ./
+    restart: always
+    environment:
+      - PORT=3000
+      - RPC_PRIVIDER=${RPC_PRIVIDER}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    ports:
+      - '3000:3000'
