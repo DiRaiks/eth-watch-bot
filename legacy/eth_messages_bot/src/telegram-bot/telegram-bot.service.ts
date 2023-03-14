@@ -82,7 +82,7 @@ export class TelegramBotService {
       const decodedMessage = ethers.toUtf8String(message);
       const words = tokenizer.tokenize(decodedMessage);
       if (this.isMessageMeaningful(words)) {
-        return message;
+        return decodedMessage;
       }
       return null;
     } catch (error) {
