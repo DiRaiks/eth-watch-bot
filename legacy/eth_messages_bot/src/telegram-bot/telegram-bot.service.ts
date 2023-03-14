@@ -91,9 +91,10 @@ export class TelegramBotService {
           if (!txText) return;
 
           const message = `New transaction received. 
-          \nBlock # ${blockNumber} \nTx hash: ${tx.hash}. 
-          \nEtherscan: https://etherscan.io/tx/${tx.hash}
-          \nTx text: ${txText}`;
+          Block # ${blockNumber} \nTx hash: ${tx.hash}. 
+          Etherscan: https://etherscan.io/tx/${tx.hash}
+          Tx text: ${txText}
+          ------------------------`;
           this.sendMessage(message);
         });
       },
