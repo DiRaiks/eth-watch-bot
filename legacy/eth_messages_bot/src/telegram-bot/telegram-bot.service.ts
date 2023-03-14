@@ -40,25 +40,25 @@ export class TelegramBotService {
 
   private initBot = () => {
     this.bot.start((ctx) => {
-      this.chatIds.push(ctx.chat.id);
       ctx.reply('Hello, I am a bot!');
     });
 
-    this.bot.command('start', (ctx) => {
+    this.bot.command('init', (ctx) => {
+      if (this.chatIds.includes(ctx.chat.id)) return;
       this.chatIds.push(ctx.chat.id);
-      ctx.reply('Hello, I am a bot!');
+      ctx.reply('Done!');
     });
 
     this.bot.command('stop', (ctx) => {
       this.chatIds = this.chatIds.filter((id) => id !== ctx.chat.id);
-      ctx.reply('Bye, I am a bot!');
+      ctx.reply('Bye!');
     });
 
     this.bot.command('help', (ctx) => {
       const message =
         `/init - зарегистрировать чат для отправки уведомлений` +
-        `\n/stop - не отправлять уведомления в текущий чат` +
-        `\n/amt - узнать количество записавшихся игроков`;
+        `\n/stop - не отправлять уведомления в текущий чат`;
+
       return ctx.reply(message);
     });
 
