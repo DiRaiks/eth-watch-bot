@@ -27,8 +27,8 @@ export class TelegramBotService {
 
   constructor() {
     this.initProvider();
-    // this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-    // this.initBot();
+    this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+    this.initBot();
     this.ethBlockSubscribe();
   }
 
@@ -89,7 +89,7 @@ export class TelegramBotService {
           console.log('txText', txText);
 
           const message = `New transaction received. \nBlock # ${blockNumber} \n Tx hash: ${tx.hash}. \nTx text: ${txText}`;
-          // this.sendMessage(message);
+          this.sendMessage(message);
         });
       },
     );
