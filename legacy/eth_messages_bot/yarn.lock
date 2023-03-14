@@ -4853,6 +4853,11 @@ wordnet-db@^3.1.11:
   resolved "https://registry.yarnpkg.com/wordnet-db/-/wordnet-db-3.1.14.tgz#7ba1ec2cb5730393f0856efcc738a60085426199"
   integrity sha512-zVyFsvE+mq9MCmwXUWHIcpfbrHHClZWZiVOzKSxNJruIcFn2RbY55zkhiAMMxM8zCVSmtNiViq8FsAZSFpMYag==
 
+wordnet@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/wordnet/-/wordnet-2.0.0.tgz#4d443e09e17643f50f9471424950f166a3e4e5b7"
+  integrity sha512-VQOEUBHU6drwXGQx37bVaRqi042IZ8NwJiT9qLtM2x1QzqgIJIRoyZa++rWrUvICK+tYz9ttfYFk1c8IiN6DVQ==
+
 wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Telegraf } from 'telegraf';
 import { ethers } from 'ethers';
-import { WordTokenizer, WordNet } from 'natural';
+import { WordTokenizer } from 'natural';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const wordnet = require('wordnet');
 
 const tokenizer = new WordTokenizer();
-const wordnet = new WordNet();
 
 @Injectable()
 export class TelegramBotService {
@@ -57,17 +58,20 @@ export class TelegramBotService {
   };
 
   private ethBlockSubscribe = async () => {
+    await wordnet.init();
+
     const subscription = await this.provider.on(
       'block',
       async (blockNumber) => {
         const block = await this.provider.getBlock(blockNumber, true);
+
         (
           block as ethers.Block &
             {
               prefetchedTransactions: ethers.TransactionResponse[]; // hack bad ethers types
             }[]
-        ).prefetchedTransactions.forEach((tx) => {
-          const txText = this.decodeBlockMessage(tx.data);
+        ).prefetchedTransactions.forEach(async (tx) => {
+          const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
           const message = `New transaction received. \nBlock # ${blockNumber} \n Tx hash: ${tx.hash}. \nTx text: ${txText}`;
@@ -77,23 +81,28 @@ export class TelegramBotService {
     );
   };
 
-  private decodeBlockMessage = (message: string) => {
+  private decodeBlockMessage = async (message: string) => {
     try {
       const decodedMessage = ethers.toUtf8String(message);
       const words = tokenizer.tokenize(decodedMessage);
-      if (this.isMessageMeaningful(words)) {
-        return decodedMessage;
-      }
+      const isValid = await this.isMessageMeaningful(words);
+
+      if (isValid) return decodedMessage;
       return null;
     } catch (error) {
       return null;
     }
   };
 
-  private isMessageMeaningful = (words: string[]) =>
-    words.some((word) => {
-      return wordnet.lookup(word, (synsets) => {
+  private isMessageMeaningful = async (words: string[]) => {
+    try {
+      return words.some(async (word) => {
+        const synsets = await wordnet.lookup(word.toLowerCase());
+
         return synsets.length > 0;
       });
-    });
+    } catch (error) {
+      return false;
+    }
+  };
 }
