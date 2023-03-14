@@ -67,7 +67,9 @@ export class TelegramBotService {
 
   public sendMessage = (message: string) => {
     this.chatIds.forEach((chatId) => {
-      this.bot.telegram.sendMessage(chatId, message);
+      this.bot.telegram.sendMessage(chatId, message, {
+        disable_web_page_preview: true,
+      });
     });
   };
 
