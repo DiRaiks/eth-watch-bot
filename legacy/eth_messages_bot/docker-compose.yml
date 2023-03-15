@@ -9,5 +9,6 @@ services:
       - PORT=3000
       - RPC_PRIVIDER=${RPC_PRIVIDER}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DEFAULT_CHANNEL_ID=${DEFAULT_CHANNEL_ID}
     ports:
       - '3000:3000'
