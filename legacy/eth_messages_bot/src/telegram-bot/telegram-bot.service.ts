@@ -26,6 +26,7 @@ export class TelegramBotService {
   private readonly bot: Telegraf;
   private chatIds: number[] = [];
   private provider: ethers.JsonRpcProvider;
+  private subscription: ethers.JsonRpcProvider;
 
   constructor() {
     this.initProvider();
@@ -54,10 +55,16 @@ export class TelegramBotService {
       ctx.reply('Bye!');
     });
 
+    this.bot.command('status', async (ctx) => {
+      const status = await this.getSuscriptionStatus();
+      ctx.reply(`Status: ${status}`);
+    });
+
     this.bot.command('help', (ctx) => {
       const message =
         `/init - зарегистрировать чат для отправки уведомлений` +
-        `\n/stop - не отправлять уведомления в текущий чат`;
+        `\n/stop - не отправлять уведомления в текущий чат` +
+        `\n/status - статус подписки на блоки`;
 
       return ctx.reply(message);
     });
@@ -73,30 +80,33 @@ export class TelegramBotService {
     });
   };
 
+  private getSuscriptionStatus = async () => {
+    const blockListeners = await this.provider.listeners('block');
+
+    return blockListeners.length > 0;
+  };
+
   private ethBlockSubscribe = async () => {
     await wordnet.init();
 
-    const subscription = await this.provider.on(
-      'block',
-      async (blockNumber) => {
-        const block = await this.provider.getBlock(blockNumber, true);
+    this.subscription = await this.provider.on('block', async (blockNumber) => {
+      const block = await this.provider.getBlock(blockNumber, true);
 
-        (
-          block as ethers.Block &
-            {
-              prefetchedTransactions: ethers.TransactionResponse[]; // hack bad ethers types
-            }[]
-        ).prefetchedTransactions.forEach(async (tx) => {
-          const txText = await this.decodeBlockMessage(tx.data);
-          if (!txText) return;
+      (
+        block as ethers.Block &
+          {
+            prefetchedTransactions: ethers.TransactionResponse[]; // hack bad ethers types
+          }[]
+      ).prefetchedTransactions.forEach(async (tx) => {
+        const txText = await this.decodeBlockMessage(tx.data);
+        if (!txText) return;
 
-          const message = `
+        const message = `
           New transaction received\nBlock # ${blockNumber}\nTx hash: ${tx.hash}\nEtherscan: https://etherscan.io/tx/${tx.hash}\nTx text: ${txText}
           ------------------------`;
-          this.sendMessage(message);
-        });
-      },
-    );
+        this.sendMessage(message);
+      });
+    });
   };
 
   private decodeBlockMessage = async (message: string) => {
