@@ -24,7 +24,11 @@ const ignoreList = [
 @Injectable()
 export class TelegramBotService {
   private readonly bot: Telegraf;
-  private chatIds: number[] = [];
+  private chatIds: number[] = [
+    process.env.DEFAULT_CHANNEL_ID
+      ? Number(process.env.DEFAULT_CHANNEL_ID)
+      : undefined,
+  ];
   private provider: ethers.JsonRpcProvider;
   private subscription: ethers.JsonRpcProvider;
 
@@ -60,11 +64,17 @@ export class TelegramBotService {
       ctx.reply(`Status: ${status}`);
     });
 
+    this.bot.command('chats', async (ctx) => {
+      const chatIds = this.getChatIds();
+      ctx.reply(`Chat ids: ${chatIds}`);
+    });
+
     this.bot.command('help', (ctx) => {
       const message =
         `/init - зарегистрировать чат для отправки уведомлений` +
         `\n/stop - не отправлять уведомления в текущий чат` +
-        `\n/status - статус подписки на блоки`;
+        `\n/status - статус подписки на блоки` +
+        `\n/chats - список чатов, которые получают уведомления`;
 
       return ctx.reply(message);
     });
@@ -84,6 +94,10 @@ export class TelegramBotService {
     const blockListeners = await this.provider.listeners('block');
 
     return blockListeners.length > 0;
+  };
+
+  private getChatIds = () => {
+    return this.chatIds;
   };
 
   private ethBlockSubscribe = async () => {
