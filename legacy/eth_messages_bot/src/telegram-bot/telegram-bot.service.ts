@@ -124,11 +124,7 @@ export class TelegramBotService {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
-          if (!this.lastMessages[blockNumber]) this.lastMessages = {};
-
-          this.lastMessages[blockNumber].push(txText);
-
-          console.log('this.lastMessages', this.lastMessages);
+          this.rememberMessages(blockNumber, txText);
 
           const message = this.createMessage(blockNumber, tx.hash, txText);
           this.sendMessage(message);
@@ -142,7 +138,8 @@ export class TelegramBotService {
       delete this.lastMessages[Object.keys(this.lastMessages)[0]];
     }
 
-    this.lastMessages[blockNumber].push(txText);
+    if (!this.lastMessages[blockNumber]) this.lastMessages[blockNumber] = [];
+    else this.lastMessages[blockNumber].push(txText);
   };
 
   public getLastMessages = () => {
