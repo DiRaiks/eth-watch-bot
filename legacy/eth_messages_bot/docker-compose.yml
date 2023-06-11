@@ -18,4 +18,4 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
     ports:
-      - '3001:3001'
+      - '3000:3000'
