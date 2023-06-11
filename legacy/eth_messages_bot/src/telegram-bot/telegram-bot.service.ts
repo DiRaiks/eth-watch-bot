@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Telegraf } from 'telegraf';
 import { ethers } from 'ethers';
+import { SimpleFallbackJsonRpcBatchProvider } from '@lido-nestjs/execution';
 import { WordTokenizer } from 'natural';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const wordnet = require('wordnet');
+
+import { ConfigService } from 'src/common/config';
+import { ExecutionProviderService } from 'src/common/execution-provider';
 
 const tokenizer = new WordTokenizer();
 
@@ -19,29 +23,34 @@ const ignoreList = [
   'c',
   'Iŋ',
   'Fς#]',
+  'DOGE.DOGE',
+  '}M',
+  'SWAP:',
+  '=:RUNE',
+  'DC-L5',
+  ') ED',
 ];
 
 @Injectable()
 export class TelegramBotService {
   private readonly bot: Telegraf;
-  private chatIds: number[] = [
-    process.env.DEFAULT_CHANNEL_ID
-      ? Number(process.env.DEFAULT_CHANNEL_ID)
-      : undefined,
-  ];
-  private provider: ethers.JsonRpcProvider;
-  private subscription: ethers.JsonRpcProvider;
 
-  constructor() {
-    this.initProvider();
-    this.bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+  private subscription: SimpleFallbackJsonRpcBatchProvider;
+  public lastMessages: Record<string, string[]> = {};
+
+  constructor(
+    protected readonly executionProviderService: ExecutionProviderService,
+    protected readonly configService: ConfigService,
+  ) {
+    this.bot = new Telegraf(this.configService.get('TELEGRAM_BOT_TOKEN'));
     this.initBot();
     this.ethBlockSubscribe();
   }
-
-  private initProvider = () => {
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_PRIVIDER, 1);
-  };
+  private chatIds: number[] = [
+    this.configService.get('DEFAULT_CHANNEL_ID')
+      ? this.configService.get('DEFAULT_CHANNEL_ID')
+      : undefined,
+  ];
 
   private initBot = () => {
     this.bot.start((ctx) => {
@@ -91,7 +100,7 @@ export class TelegramBotService {
   };
 
   private getSuscriptionStatus = async () => {
-    const blockListeners = await this.provider.listeners('block');
+    const blockListeners = this.executionProviderService.listen('block');
 
     return blockListeners.length > 0;
   };
@@ -103,24 +112,58 @@ export class TelegramBotService {
   private ethBlockSubscribe = async () => {
     await wordnet.init();
 
-    this.subscription = await this.provider.on('block', async (blockNumber) => {
-      const block = await this.provider.getBlock(blockNumber, true);
+    this.subscription = await this.executionProviderService.provider.on(
+      'block',
+      async (blockNumber) => {
+        const block =
+          await this.executionProviderService.provider.getBlockWithTransactions(
+            blockNumber,
+          );
 
-      (
-        block as ethers.Block &
-          {
-            prefetchedTransactions: ethers.TransactionResponse[]; // hack bad ethers types
-          }[]
-      ).prefetchedTransactions.forEach(async (tx) => {
-        const txText = await this.decodeBlockMessage(tx.data);
-        if (!txText) return;
+        block.transactions.forEach(async (tx) => {
+          const txText = await this.decodeBlockMessage(tx.data);
+          if (!txText) return;
 
-        const message = `
-          New transaction received\nBlock # ${blockNumber}\nTx hash: ${tx.hash}\nEtherscan: https://etherscan.io/tx/${tx.hash}\nTx text: ${txText}
-          ------------------------`;
-        this.sendMessage(message);
-      });
+          if (!this.lastMessages[blockNumber]) this.lastMessages = {};
+
+          this.lastMessages[blockNumber].push(txText);
+
+          console.log('this.lastMessages', this.lastMessages);
+
+          const message = this.createMessage(blockNumber, tx.hash, txText);
+          this.sendMessage(message);
+        });
+      },
+    );
+  };
+
+  private rememberMessages = (blockNumber: number, txText: string) => {
+    if (Object.keys(this.lastMessages).length > 3) {
+      delete this.lastMessages[Object.keys(this.lastMessages)[0]];
+    }
+
+    this.lastMessages[blockNumber].push(txText);
+  };
+
+  public getLastMessages = () => {
+    const messages = Object.keys(this.lastMessages).map((blockNumber) => {
+      return {
+        blockNumber,
+        messages: this.lastMessages[blockNumber],
+      };
     });
+
+    return messages;
+  };
+
+  private createMessage = (
+    blockNumber: number,
+    txHash: string,
+    txText: string,
+  ) => {
+    return `
+    New transaction received\nBlock # ${blockNumber}\nTx hash: ${txHash}\nEtherscan: https://etherscan.io/tx/${txHash}\nTx text: ${txText}
+    ------------------------`;
   };
 
   private decodeBlockMessage = async (message: string) => {
