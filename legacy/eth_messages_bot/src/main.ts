@@ -27,6 +27,21 @@ async function bootstrap() {
   const appPort = configService.get('PORT');
   const corsWhitelist = configService.get('CORS_WHITELIST_REGEXP');
 
+  // cors
+  if (corsWhitelist !== '') {
+    const whitelistRegexp = new RegExp(corsWhitelist);
+
+    app.enableCors({
+      origin(origin, callback) {
+        if (!origin || whitelistRegexp.test(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+    });
+  }
+
   // versions
   app.enableVersioning({ type: VersioningType.URI });
 

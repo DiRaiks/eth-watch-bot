@@ -17,5 +17,6 @@ services:
       - GLOBAL_CACHE_TTL=${GLOBAL_CACHE_TTL}
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
+      - CORS_WHITELIST_REGEXP=${CORS_WHITELIST_REGEXP}
     ports:
       - '3000:3000'
