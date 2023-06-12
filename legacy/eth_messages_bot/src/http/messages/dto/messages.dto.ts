@@ -2,11 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class MessagesDto {
   @ApiProperty({
-    example: { blockNumber: '123', messages: ['message1', 'message2'] },
+    example: {
+      blockNumber: '123',
+      messages: [{ message: 'Hello', hash: '0x123' }],
+    },
     description: 'Messages',
   })
   blocks: {
     blockNumber: string;
-    messages: string[];
+    messages: { message: string; hash: string }[];
   }[];
 }

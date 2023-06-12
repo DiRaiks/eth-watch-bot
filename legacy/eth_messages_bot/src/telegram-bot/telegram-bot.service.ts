@@ -38,7 +38,7 @@ export class TelegramBotService {
   private readonly bot: Telegraf;
 
   private subscription: SimpleFallbackJsonRpcBatchProvider;
-  public lastMessages: Record<string, string[]> = {};
+  public lastMessages: Record<string, { message: string; hash: string }[]> = {};
 
   constructor(
     protected readonly executionProviderService: ExecutionProviderService,
@@ -126,7 +126,7 @@ export class TelegramBotService {
           const txText = await this.decodeBlockMessage(tx.data);
           if (!txText) return;
 
-          this.rememberMessages(blockNumber, txText);
+          this.rememberMessages(blockNumber, txText, tx.hash);
 
           const message = this.createMessage(blockNumber, tx.hash, txText);
           this.sendMessage(message);
@@ -135,13 +135,17 @@ export class TelegramBotService {
     );
   };
 
-  private rememberMessages = (blockNumber: number, txText: string) => {
-    if (Object.keys(this.lastMessages).length > 8) {
+  private rememberMessages = (
+    blockNumber: number,
+    txText: string,
+    hash: string,
+  ) => {
+    if (Object.keys(this.lastMessages).length > 10) {
       delete this.lastMessages[Object.keys(this.lastMessages)[0]];
     }
 
     if (!this.lastMessages[blockNumber]) this.lastMessages[blockNumber] = [];
-    else this.lastMessages[blockNumber].push(txText);
+    else this.lastMessages[blockNumber].push({ message: txText, hash });
   };
 
   public getLastMessages = () => {
