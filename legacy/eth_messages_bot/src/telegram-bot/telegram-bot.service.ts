@@ -28,6 +28,8 @@ const ignoreList = [
   'SWAP:',
   '=:RUNE',
   'DC-L5',
+  '-:ETH.ETH',
+  'Xfl',
   ') ED',
 ];
 
@@ -134,7 +136,7 @@ export class TelegramBotService {
   };
 
   private rememberMessages = (blockNumber: number, txText: string) => {
-    if (Object.keys(this.lastMessages).length > 3) {
+    if (Object.keys(this.lastMessages).length > 8) {
       delete this.lastMessages[Object.keys(this.lastMessages)[0]];
     }
 
