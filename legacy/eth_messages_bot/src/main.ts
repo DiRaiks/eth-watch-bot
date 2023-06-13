@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -12,9 +14,13 @@ import { SWAGGER_URL } from 'src/http/common/swagger';
 import { AppModule, APP_DESCRIPTION, APP_VERSION } from './app';
 
 async function bootstrap() {
+  const httpsOptions = {
+    key: fs.readFileSync('./secrets/private-key.pem'),
+    cert: fs.readFileSync('./secrets/public-certificate.pem'),
+  };
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true }),
+    new FastifyAdapter({ trustProxy: true, https: httpsOptions }),
     {
       bufferLogs: true,
     },
