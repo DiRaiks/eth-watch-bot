@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
@@ -15,8 +16,10 @@ import { AppModule, APP_DESCRIPTION, APP_VERSION } from './app';
 
 async function bootstrap() {
   const httpsOptions = {
-    key: fs.readFileSync('./secrets/private-key.pem'),
-    cert: fs.readFileSync('./secrets/public-certificate.pem'),
+    key: fs.readFileSync(path.resolve(__dirname, './secrets/private-key.pem')),
+    cert: fs.readFileSync(
+      path.resolve(__dirname, './secrets/public-certificate.pem'),
+    ),
   };
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
