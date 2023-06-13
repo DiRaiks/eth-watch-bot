@@ -5,16 +5,9 @@ import { ExecutionProviderModule } from 'src/common/execution-provider';
 import { LoggerModule } from 'src/common/logger';
 import { AppService } from './app.service';
 import { HTTPModule } from '../http';
-import { TelegramBotModule } from '../telegram-bot/telegram-bot.module';
 
 @Module({
-  imports: [
-    LoggerModule,
-    ExecutionProviderModule,
-    HTTPModule,
-    ConfigModule,
-    TelegramBotModule,
-  ],
+  imports: [LoggerModule, ExecutionProviderModule, HTTPModule, ConfigModule],
   providers: [AppService],
 })
 export class AppModule {}
