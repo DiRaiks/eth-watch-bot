@@ -126,9 +126,7 @@ export class TelegramBotService {
 
         const message = this.createMessage(blockNumber, tx.hash, txText);
         // TODO: delete after fix listeners in lib
-        if (
-          !this.lastMessages[blockNumber].find((m) => m.message === message)
-        ) {
+        if (!this.lastMessages[blockNumber].find((m) => m.hash === tx.hash)) {
           this.sendMessage(message);
         }
       });
