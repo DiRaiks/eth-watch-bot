@@ -1,11 +1,16 @@
 import { SimpleFallbackJsonRpcBatchProvider } from '@lido-nestjs/execution';
 import { CHAINS } from '@lido-nestjs/constants';
 import { Injectable } from '@nestjs/common';
-import { Listener } from 'ethers';
+import {
+  BlockWithTransactions,
+  Listener,
+} from '@ethersproject/abstract-provider';
 
 @Injectable()
 export class ExecutionProviderService {
-  constructor(readonly provider: SimpleFallbackJsonRpcBatchProvider) {}
+  constructor(
+    protected readonly provider: SimpleFallbackJsonRpcBatchProvider,
+  ) {}
 
   /**
    * Returns network name
@@ -26,5 +31,18 @@ export class ExecutionProviderService {
 
   public listen(eventName: string): Listener[] {
     return this.provider.listeners(eventName);
+  }
+
+  public on(
+    eventName: string,
+    listener: Listener,
+  ): SimpleFallbackJsonRpcBatchProvider {
+    return this.provider.on(eventName, listener);
+  }
+
+  public getBlockWithTransactions(
+    blockNumber: number,
+  ): Promise<BlockWithTransactions> {
+    return this.provider.getBlockWithTransactions(blockNumber);
   }
 }

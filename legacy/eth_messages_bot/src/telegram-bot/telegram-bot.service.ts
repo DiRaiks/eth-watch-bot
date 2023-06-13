@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Telegraf } from 'telegraf';
 import { ethers } from 'ethers';
-import { SimpleFallbackJsonRpcBatchProvider } from '@lido-nestjs/execution';
 import { WordTokenizer } from 'natural';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const wordnet = require('wordnet');
@@ -37,7 +36,6 @@ const ignoreList = [
 export class TelegramBotService {
   private readonly bot: Telegraf;
 
-  private subscription: SimpleFallbackJsonRpcBatchProvider;
   public lastMessages: Record<string, { message: string; hash: string }[]> = {};
 
   constructor(
@@ -104,7 +102,7 @@ export class TelegramBotService {
   private getSuscriptionStatus = async () => {
     const blockListeners = this.executionProviderService.listen('block');
 
-    return blockListeners.length > 0;
+    return blockListeners.length;
   };
 
   private getChatIds = () => {
@@ -114,25 +112,27 @@ export class TelegramBotService {
   private ethBlockSubscribe = async () => {
     await wordnet.init();
 
-    this.subscription = await this.executionProviderService.provider.on(
-      'block',
-      async (blockNumber) => {
-        const block =
-          await this.executionProviderService.provider.getBlockWithTransactions(
-            blockNumber,
-          );
+    await this.executionProviderService.on('block', async (blockNumber) => {
+      const block =
+        await this.executionProviderService.getBlockWithTransactions(
+          blockNumber,
+        );
 
-        block.transactions.forEach(async (tx) => {
-          const txText = await this.decodeBlockMessage(tx.data);
-          if (!txText) return;
+      block.transactions.forEach(async (tx) => {
+        const txText = await this.decodeBlockMessage(tx.data);
+        if (!txText) return;
 
-          this.rememberMessages(blockNumber, txText, tx.hash);
+        this.rememberMessages(blockNumber, txText, tx.hash);
 
-          const message = this.createMessage(blockNumber, tx.hash, txText);
+        const message = this.createMessage(blockNumber, tx.hash, txText);
+        // TODO: delete after fix listeners in lib
+        if (
+          !this.lastMessages[blockNumber].find((m) => m.message === message)
+        ) {
           this.sendMessage(message);
-        });
-      },
-    );
+        }
+      });
+    });
   };
 
   private rememberMessages = (
