@@ -31,7 +31,6 @@ const ignoreList = [
   'Xfl',
   ') ED',
   "'op':'mint','tick'",
-  'tick',
 ];
 
 @Injectable()
@@ -172,6 +171,7 @@ export class TelegramBotService {
   private decodeBlockMessage = async (message: string) => {
     try {
       const decodedMessage = ethers.toUtf8String(message);
+      if (ignoreList.some((item) => decodedMessage.includes(item))) return null;
       if (ignoreList.includes(decodedMessage)) return null;
 
       const words = tokenizer.tokenize(decodedMessage);
