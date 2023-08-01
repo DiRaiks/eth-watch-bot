@@ -30,6 +30,7 @@ const ignoreList = [
   '-:ETH.ETH',
   'Xfl',
   ') ED',
+  "'op':'mint','tick'",
 ];
 
 @Injectable()
