@@ -31,6 +31,7 @@ const ignoreList = [
   'Xfl',
   ') ED',
   "'op':'mint','tick'",
+  'tick',
 ];
 
 @Injectable()
