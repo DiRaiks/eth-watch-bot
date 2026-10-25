@@ -78,6 +78,29 @@ describe('alert details', () => {
   });
 });
 
+describe('approval alerts', () => {
+  it('link to revoke.cash for the address and chain, outside the spoiler', () => {
+    const approval: Activity = {
+      ...base,
+      address: ALICE,
+      importance: 'alert',
+      kind: 'approval',
+      token: USDC,
+      spender: BOB,
+      value: 2n ** 255n,
+      unlimited: true,
+    };
+    const text = message(approval, true);
+    expect(text.split('\n')[0]).toContain('разрешение на токены');
+    expect(text).toContain(
+      `href="https://revoke.cash/address/${ALICE}?chainId=1"`,
+    );
+    expect(text.indexOf('revoke.cash/address')).toBeGreaterThan(
+      text.indexOf('</tg-spoiler>'),
+    );
+  });
+});
+
 describe('details setting', () => {
   it('hides details by default and switches from /settings', () => {
     expect(DEFAULT_PREFS.details).toBe('hidden');

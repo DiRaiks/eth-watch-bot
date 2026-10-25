@@ -166,6 +166,7 @@ export const buildApp = async (options: AppOptions) => {
             ? priceLookup()
             : null,
       digest,
+      contacts: stores.contacts,
       log: app.log,
       onSent: metrics.notificationSent,
       now: options.now,

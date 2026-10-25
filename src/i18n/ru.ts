@@ -7,6 +7,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const ru: Texts = {
   thousandsSeparator: ' ',
   time: (day, month, time) => `${pad(day)}.${pad(month + 1)} ${time} UTC`,
+  localTime: (day, month, time) => `${pad(day)}.${pad(month + 1)} ${time}`,
   transaction: 'Транзакция',
 
   start: (chains) =>
@@ -119,7 +120,17 @@ export const ru: Texts = {
   eventAlert: 'требует внимания',
   moreInTx: (count) => html`…и ещё ${count} в этой транзакции`,
   advice: html`<i>Если это были не вы: отзовите разрешения (revoke.cash) и выведите средства на новый кошелёк.</i>`,
-  block: (link, block) => html`${link} · блок ${block}`,
+  block: (link, block, time) =>
+    html`${link} · блок ${block}${time ? ` · ${time}` : ''}`,
+  eventFailed: ' · ❌ не прошла',
+  txFailed: html`❌ <b>Транзакция не прошла</b>: монеты и токены не переведены, комиссия списана`,
+  fee: (amount) => html`⛽ Комиссия ${amount}`,
+  balance: (label, amount) =>
+    html`💰 Баланс${label ? html` ${label}` : ''}: ${amount}`,
+  contractNote: ' (контракт)',
+  firstTimeNote: ' · 🆕 впервые',
+  revoke: (url) =>
+    html`🧹 <a href="${url}">Проверить и отозвать разрешения</a> на revoke.cash`,
   units: 'ед.',
   andMore: (count) => `и ещё ${count}`,
 

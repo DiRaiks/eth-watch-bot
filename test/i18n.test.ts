@@ -164,7 +164,7 @@ describe('English alerts', () => {
 
   it('describes drains, poisoning and forged tokens', () => {
     expect(text(sent)).toMatch(
-      /^🚨 Pulled out <b>2,500<\/b> <a [^>]+>USDC<\/a> → <a [^>]+>0xae7a…fE84<\/a> in a transaction sent by <a [^>]+>0x0000…05Fa<\/a>$/,
+      /^🚨 Pulled out <b>2,500<\/b> <a [^>]+>USDC<\/a> → <a [^>]+>Lido stETH<\/a> in a transaction sent by <a [^>]+>0x0000…05Fa<\/a>$/,
     );
     expect(text({ ...sent, value: 0n, spam: 'fake-transfer' })).toContain(
       'This is address poisoning',
