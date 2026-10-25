@@ -16,5 +16,5 @@ USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD wget -qO- http://127.0.0.1:3000/health || exit 1
-# Secrets (BOT_TOKEN, RPC URLs, MONGO_URI) come from the environment at runtime
+# Secrets (BOT_TOKEN, RPC URLs, DATABASE_URL) come from the environment at runtime
 CMD ["node", "dist/index.js"]

@@ -16,6 +16,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3000'
+    depends_on:
+      # Only with the postgres profile; an external database needs no waiting
+      postgres:
+        condition: service_healthy
+        required: false
     logging: *logging
 
   # Optional HTTPS entry (COMPOSE_PROFILES=web): Telegram webhook and GET /v1/messages.
@@ -38,33 +43,42 @@ services:
       - bot
     logging: *logging
 
-  # Optional local MongoDB (COMPOSE_PROFILES=mongo, MONGO_URI=mongodb://mongo:27017/eth-watch).
-  # Otherwise point MONGO_URI to Atlas.
-  mongo:
-    image: mongo:${MONGO_VERSION:-8.0.34}
-    profiles: [mongo]
+  # Optional local Postgres (COMPOSE_PROFILES=postgres): set POSTGRES_PASSWORD, and
+  # DATABASE_URL=postgres://eth_watch:<POSTGRES_PASSWORD>@postgres:5432/eth_watch
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    profiles: [postgres]
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: eth_watch
+      POSTGRES_DB: eth_watch
+      # The image refuses to start without it
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
     volumes:
-      - mongo_data:/data/db
+      # Postgres 18 keeps its data under /var/lib/postgresql/<version>
+      - postgres_data:/var/lib/postgresql
     healthcheck:
-      test:
-        ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      test: ['CMD', 'pg_isready', '-U', 'eth_watch', '-d', 'eth_watch']
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 30s
+      start_interval: 2s
     logging: *logging
 
-  # Daily gzip dump of the MONGO_DB database to ./backups, keeps BACKUP_KEEP_DAYS
-  mongo-backup:
-    image: mongo:${MONGO_VERSION:-8.0.34}
-    profiles: [mongo]
+  # Daily dump of the database to ./backups, keeps BACKUP_KEEP_DAYS
+  postgres-backup:
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    profiles: [postgres]
     restart: unless-stopped
     depends_on:
-      - mongo
+      - postgres
     environment:
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
-      # The database of MONGO_URI (mongodb://mongo:27017/<MONGO_DB>)
-      MONGO_DB: ${MONGO_DB:-eth-watch}
+      PGHOST: postgres
+      PGUSER: eth_watch
+      PGDATABASE: eth_watch
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
     volumes:
       - ./backups:/backup
     entrypoint:
@@ -72,13 +86,14 @@ services:
       - -c
       - |
         while true; do
-          file="/backup/eth-watch-$$(date -u +%Y%m%dT%H%M%SZ).archive.gz"
-          if mongodump --uri="mongodb://mongo:27017/$$MONGO_DB" --gzip --archive="$$file"; then
+          file="/backup/eth-watch-$$(date -u +%Y%m%dT%H%M%SZ).dump"
+          if pg_dump --format=custom --file="$$file"; then
             echo "backup written: $$file"
           else
+            rm -f "$$file"
             echo "backup failed" >&2
           fi
-          find /backup -name 'eth-watch-*.archive.gz' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          find /backup -name 'eth-watch-*.dump' -mtime +"$$BACKUP_KEEP_DAYS" -delete
           sleep 86400
         done
     logging: *logging
@@ -86,4 +101,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
-  mongo_data:
+  postgres_data:

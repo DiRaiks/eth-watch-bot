@@ -21,20 +21,22 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@dirai/tg-kit": "^1.2.0",
+    "@dirai/tg-kit": "^1.4.0",
     "@fastify/cors": "^11.3.1",
     "@fastify/rate-limit": "^11.2.1",
     "@prometheus-io/client": "^0.16.1",
     "fastify": "^5.12.7",
     "grammy": "^1.46.0",
-    "mongodb": "^7.7.0",
+    "pg": "^8.23.1",
     "viem": "^2.57.11"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
+    "@electric-sql/pglite": "0.5.9",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
@@ -42,7 +44,6 @@
     "globals": "^17.13.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "mongodb-memory-server": "^11.3.0",
     "pino-pretty": "^13.2.0",
     "prettier": "^3.9.10",
     "rimraf": "^6.1.3",

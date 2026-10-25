@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import pg from 'pg';
 import { createPublicClient, type PublicClient } from 'viem';
 import { normalize } from 'viem/ens';
 
@@ -8,7 +8,7 @@ import { ConfigError, loadConfig, type Config } from './config.js';
 import { checkRpcs, rpcTransport } from './rpc.js';
 import type { ChainReader } from './scanner/types.js';
 import { viemReader } from './scanner/viem-reader.js';
-import { memoryStores, mongoStores } from './storage.js';
+import { memoryStores, pgStores } from './storage.js';
 
 const readConfig = (): Config => {
   try {
@@ -25,8 +25,8 @@ const readConfig = (): Config => {
 const config = readConfig();
 
 // In memory a restart forgets every chat and where scanning stopped
-if (process.env.NODE_ENV === 'production' && !config.mongoUri) {
-  console.error('Configuration error: MONGO_URI is required in production');
+if (process.env.NODE_ENV === 'production' && !config.databaseUrl) {
+  console.error('Configuration error: DATABASE_URL is required in production');
   process.exit(1);
 }
 
@@ -53,8 +53,10 @@ for (const chain of config.chains) {
   readers[chain.name] = viemReader(client, rpc.current);
 }
 
-const mongo = config.mongoUri ? new MongoClient(config.mongoUri) : null;
-const stores = mongo ? await mongoStores(mongo.db()) : memoryStores();
+const db = config.databaseUrl
+  ? new pg.Pool({ connectionString: config.databaseUrl, max: 5 })
+  : null;
+const stores = db ? await pgStores(db) : memoryStores();
 
 const ethereum = clients.ethereum;
 const { app } = await buildApp({
@@ -80,8 +82,15 @@ for (const { chain, host, chainId } of rpcWarnings) {
   );
 }
 
-if (!mongo) {
-  app.log.warn('MONGO_URI is not set: chats and progress are kept in memory');
+// A dropped idle connection: the pool reconnects; without a listener it would crash
+db?.on('error', (error) =>
+  app.log.error({ err: error }, 'database connection lost'),
+);
+
+if (!db) {
+  app.log.warn(
+    'DATABASE_URL is not set: chats and progress are kept in memory',
+  );
 }
 
 const shutdown = async (signal: string) => {
@@ -90,7 +99,7 @@ const shutdown = async (signal: string) => {
   setTimeout(() => process.exit(1), 8000).unref();
   try {
     await app.close();
-    await mongo?.close();
+    await db?.end();
     process.exit(0);
   } catch (error) {
     app.log.error({ err: error }, 'shutdown failed');

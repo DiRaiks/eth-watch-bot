@@ -1,14 +1,15 @@
-import { memoryStore, mongoStore, type SubscriptionStore } from '@dirai/tg-kit';
-import type { Db } from 'mongodb';
+import {
+  memoryStore,
+  pgStore,
+  type PgClientLike,
+  type SubscriptionStore,
+} from '@dirai/tg-kit';
+import type { Address, Hash } from 'viem';
 
 import type { ChainName } from './chains.js';
 import type { BlockMessage, MessageStore } from './messages/handler.js';
 import type { CheckpointStore } from './scanner/types.js';
-import {
-  memoryDigests,
-  mongoDigests,
-  type DigestStore,
-} from './watch/digest.js';
+import { memoryDigests, pgDigests, type DigestStore } from './watch/digest.js';
 
 export type Stores = {
   chats: SubscriptionStore;
@@ -17,7 +18,7 @@ export type Stores = {
   digests: DigestStore;
 };
 
-/** Messages older than this are dropped from MongoDB */
+/** Messages older than this are deleted from the database */
 const MESSAGES_TTL_DAYS = 90;
 const MEMORY_MESSAGES = 200;
 
@@ -57,58 +58,114 @@ export const memoryStores = (): Stores => ({
   digests: memoryDigests(),
 });
 
-type CheckpointDocument = { chain: ChainName; block: number; updatedAt: Date };
-type MessageDocument = BlockMessage & { createdAt: Date };
+/** The subset of a Postgres client the stores use: a `pg` Pool, or PGlite in tests */
+export type Sql = PgClientLike;
 
-export const mongoStores = async (db: Db): Promise<Stores> => {
-  const chats = db.collection('chats');
-  const checkpoints = db.collection<CheckpointDocument>('checkpoints');
-  const messages = db.collection<MessageDocument>('messages');
+/** Messages are deleted at most this often, on the way of saving new ones */
+const CLEANUP_INTERVAL_MS = 60 * 60_000;
 
-  await Promise.all([
-    chats.createIndex({ chatId: 1 }, { unique: true }),
-    chats.createIndex({ 'settings.watches.address': 1 }),
-    db.collection('digests').createIndex({ chatId: 1 }, { unique: true }),
-    checkpoints.createIndex({ chain: 1 }, { unique: true }),
-    messages.createIndex({ chain: 1, hash: 1 }, { unique: true }),
-    messages.createIndex({ timestamp: -1 }),
-    messages.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: MESSAGES_TTL_DAYS * 86_400 },
-    ),
-  ]);
+const SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS checkpoints (
+    chain text PRIMARY KEY,
+    block bigint NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS messages (
+    chain text NOT NULL,
+    hash text NOT NULL,
+    block_number bigint NOT NULL,
+    from_address text NOT NULL,
+    to_address text,
+    text text NOT NULL,
+    timestamp bigint NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (chain, hash)
+  )`,
+  `CREATE INDEX IF NOT EXISTS messages_recent_idx
+    ON messages (timestamp DESC, block_number DESC)`,
+  `CREATE INDEX IF NOT EXISTS messages_created_idx ON messages (created_at)`,
+];
+
+type MessageRow = {
+  chain: ChainName;
+  hash: Hash;
+  block_number: string | number;
+  from_address: Address;
+  to_address: Address | null;
+  text: string;
+  timestamp: string | number;
+};
+
+export const pgStores = async (sql: Sql): Promise<Stores> => {
+  for (const statement of SCHEMA) await sql.query(statement);
+  const digests = await pgDigests(sql);
+
+  let cleanedAt = 0;
+  const cleanup = async () => {
+    if (Date.now() - cleanedAt < CLEANUP_INTERVAL_MS) return;
+    cleanedAt = Date.now();
+    await sql.query(
+      `DELETE FROM messages WHERE created_at < now() - make_interval(days => $1)`,
+      [MESSAGES_TTL_DAYS],
+    );
+  };
 
   return {
-    chats: mongoStore(chats),
-    digests: mongoDigests(db.collection('digests')),
+    chats: pgStore(sql, { table: 'chats' }),
+    digests,
     checkpoints: {
       async get(chain) {
-        return (await checkpoints.findOne({ chain }))?.block ?? null;
+        const { rows } = await sql.query(
+          'SELECT block FROM checkpoints WHERE chain = $1',
+          [chain],
+        );
+        const row = rows[0] as { block: string | number } | undefined;
+        return row ? Number(row.block) : null;
       },
       async set(chain, block) {
-        await checkpoints.updateOne(
-          { chain },
-          { $set: { block, updatedAt: new Date() } },
-          { upsert: true },
+        await sql.query(
+          `INSERT INTO checkpoints (chain, block) VALUES ($1, $2)
+           ON CONFLICT (chain) DO UPDATE SET block = $2, updated_at = now()`,
+          [chain, block],
         );
       },
     },
     messages: {
       async add(message) {
-        const result = await messages.updateOne(
-          { chain: message.chain, hash: message.hash },
-          { $setOnInsert: { ...message, createdAt: new Date() } },
-          { upsert: true },
+        await cleanup();
+        const { rows } = await sql.query(
+          `INSERT INTO messages
+             (chain, hash, block_number, from_address, to_address, text, timestamp)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (chain, hash) DO NOTHING
+           RETURNING hash`,
+          [
+            message.chain,
+            message.hash,
+            message.blockNumber,
+            message.from,
+            message.to,
+            message.text,
+            message.timestamp,
+          ],
         );
-        return result.upsertedCount === 1;
+        return rows.length === 1;
       },
       async recent(limit) {
-        const docs = await messages
-          .find({}, { projection: { _id: 0, createdAt: 0 } })
-          .sort({ timestamp: -1, blockNumber: -1 })
-          .limit(limit)
-          .toArray();
-        return docs as BlockMessage[];
+        const { rows } = await sql.query(
+          `SELECT chain, hash, block_number, from_address, to_address, text, timestamp
+           FROM messages ORDER BY timestamp DESC, block_number DESC LIMIT $1`,
+          [limit],
+        );
+        return (rows as MessageRow[]).map((row) => ({
+          chain: row.chain,
+          blockNumber: Number(row.block_number),
+          hash: row.hash,
+          from: row.from_address,
+          to: row.to_address,
+          text: row.text,
+          timestamp: Number(row.timestamp),
+        }));
       },
     },
   };

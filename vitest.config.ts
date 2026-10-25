@@ -7,7 +7,7 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
     coverage: {
       include: ['src/**'],
-      // Process entry point: wiring of real RPC clients and MongoDB
+      // Process entry point: wiring of real RPC clients and Postgres
       exclude: ['src/index.ts'],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },
