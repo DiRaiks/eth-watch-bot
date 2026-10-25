@@ -1,6 +1,8 @@
 import type { SubscriptionStore } from '@dirai/tg-kit';
 import { getAddress, isAddress, type Address } from 'viem';
 
+import { DEFAULT_PREFS, readPrefs, type ChatPrefs } from './prefs.js';
+
 export type Watch = {
   /** Checksummed */
   address: Address;
@@ -29,6 +31,7 @@ const readWatches = (settings: Record<string, unknown>): Watch[] =>
  */
 export class WatchService {
   private readonly index = new Map<string, Map<number, Watch>>();
+  private readonly prefsByChat = new Map<number, ChatPrefs>();
   private readonly locks = new Map<number, Promise<unknown>>();
   /** Grows with every change of the index */
   private version = 0;
@@ -50,15 +53,19 @@ export class WatchService {
       const chats = await this.store.list();
       if (version !== this.version) continue;
       this.index.clear();
+      this.prefsByChat.clear();
       for (const chat of chats) {
-        this.indexChat(chat.chatId, readWatches(chat.settings));
+        this.indexChat(chat.chatId, chat.settings);
       }
       return;
     }
   }
 
-  private indexChat(chatId: number, watches: Watch[]) {
+  private indexChat(chatId: number, settings: Record<string, unknown>) {
     this.version += 1;
+    const watches = readWatches(settings);
+    if (settings.prefs) this.prefsByChat.set(chatId, readPrefs(settings));
+    else this.prefsByChat.delete(chatId);
     for (const [address, watchers] of this.index) {
       watchers.delete(chatId);
       if (!watchers.size) this.index.delete(address);
@@ -90,8 +97,42 @@ export class WatchService {
     const settings = chat?.settings ?? {};
     const watches = change(readWatches(settings));
     if (!watches) return;
-    await this.store.save(chatId, { settings: { ...settings, watches } });
-    this.indexChat(chatId, watches);
+    const next = { ...settings, watches };
+    await this.store.save(chatId, { settings: next });
+    this.indexChat(chatId, next);
+  }
+
+  /** The chat's alert settings (defaults until changed) */
+  prefs(chatId: number): ChatPrefs {
+    return this.prefsByChat.get(chatId) ?? DEFAULT_PREFS;
+  }
+
+  /**
+   * Changes the chat's settings. A function gets the stored settings inside the chat's
+   * lock, so two quick button presses build on each other; null changes nothing.
+   */
+  setPrefs(
+    chatId: number,
+    change:
+      Partial<ChatPrefs> | ((prefs: ChatPrefs) => Partial<ChatPrefs> | null),
+  ): Promise<{ prefs: ChatPrefs; changed: boolean }> {
+    return this.withChat(chatId, async () => {
+      const chat = await this.store.get(chatId);
+      const settings = chat?.settings ?? {};
+      const current = readPrefs(settings);
+      const update = typeof change === 'function' ? change(current) : change;
+      if (!update) return { prefs: current, changed: false };
+      const prefs = { ...current, ...update };
+      const next = { ...settings, prefs };
+      await this.store.save(chatId, { settings: next });
+      this.indexChat(chatId, next);
+      return { prefs, changed: true };
+    });
+  }
+
+  /** Chats with saved settings, e.g. to find the ones that asked for a digest */
+  chatsWithPrefs(): [number, ChatPrefs][] {
+    return [...this.prefsByChat];
   }
 
   async list(chatId: number): Promise<Watch[]> {
@@ -155,12 +196,23 @@ export class WatchService {
     });
   }
 
-  /** Chats watching the address that have not muted it */
-  watchers(address: string): Watcher[] {
+  /**
+   * Chats watching the address that have not muted it. Risky activity passes
+   * `includeMuted`: a mute should silence noise, not hide a drain.
+   */
+  watchers(address: string, { includeMuted = false } = {}): Watcher[] {
     const now = this.now();
     return [...(this.index.get(key(address)) ?? [])]
-      .filter(([, watch]) => !watch.mutedUntil || watch.mutedUntil <= now)
+      .filter(
+        ([, watch]) =>
+          includeMuted || !watch.mutedUntil || watch.mutedUntil <= now,
+      )
       .map(([chatId, watch]) => ({ chatId, watch }));
+  }
+
+  /** Whether any chat watches the address, muted or not */
+  isWatched(address: string) {
+    return this.index.has(key(address));
   }
 
   hasWatches() {

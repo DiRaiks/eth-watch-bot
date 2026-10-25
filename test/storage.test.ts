@@ -53,6 +53,27 @@ describe('mongo stores', () => {
     expect(recent).toEqual([msg(2), msg(1)]);
   });
 
+  it('keeps digest entries until taken, and the last digest day', async () => {
+    const entry = {
+      address: ALICE,
+      chain: 'ethereum' as const,
+      hash: txHash(1),
+      at: 1,
+    };
+    expect(await stores.digests.take(3)).toEqual([]);
+    await stores.digests.add(3, entry);
+    await stores.digests.add(3, { ...entry, hash: txHash(2), usd: 5 });
+    expect(await stores.digests.take(3)).toEqual([
+      entry,
+      { ...entry, hash: txHash(2), usd: 5 },
+    ]);
+    expect(await stores.digests.take(3)).toEqual([]);
+
+    expect(await stores.digests.lastSent(3)).toBeNull();
+    await stores.digests.markSent(3, '2026-10-25');
+    expect(await stores.digests.lastSent(3)).toBe('2026-10-25');
+  });
+
   it('keeps chats with their watches', async () => {
     await stores.chats.save(7, { settings: { watches: [{ address: ALICE }] } });
     expect(await stores.chats.list()).toEqual([

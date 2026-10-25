@@ -9,6 +9,7 @@ import {
   buildTestApp,
   callback,
   CAROL,
+  erc20,
   fakeChain,
   message,
   testConfig,
@@ -91,20 +92,12 @@ describe('address watching', () => {
     await mine(
       t,
       [tx(1, { from: ALICE, to: USDC, input: '0xa9059cbb0000' })],
-      [
-        {
-          token: USDC,
-          from: ALICE,
-          to: CAROL,
-          value: 250_000_000n,
-          transactionHash: tx(1).hash,
-        },
-      ],
+      [erc20(1, { from: ALICE, to: CAROL, value: 250_000_000n })],
     );
     expect(t.api.sent()).toHaveLength(1);
     const text = t.api.texts()[0];
-    expect(text).toContain('⚙️ Вызов контракта');
-    expect(text).toContain('метод <code>0xa9059cbb</code>');
+    expect(text).toContain('⚙️ Вызов <a');
+    expect(text).toContain('· <b>transfer</b>');
     expect(text).toContain('⬆️ Отправлено <b>250</b>');
     expect(text).toContain('>USDC</a>');
   });
@@ -140,15 +133,7 @@ describe('address watching', () => {
         tx(1, { from: ALICE, to: null }),
         tx(2, { from: BOB, to: ALICE, input: '0x12345678' }),
       ],
-      [
-        {
-          token: unknown,
-          from: BOB,
-          to: ALICE,
-          value: 5n,
-          transactionHash: tx(3).hash,
-        },
-      ],
+      [erc20(3, { token: unknown, from: BOB, to: ALICE, value: 5n })],
     );
     const texts = t.api.texts();
     expect(texts[0]).toContain('🧱 Создание контракта');

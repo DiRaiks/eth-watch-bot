@@ -18,7 +18,10 @@ const MAX_LABEL = 32;
  * group or channel. Unlike channel posts, button presses carry the user, so channel
  * subscribers are checked too.
  */
-const canManage = async (ctx: Context, admins: (id?: number) => boolean) => {
+export const canManage = async (
+  ctx: Context,
+  admins: (id?: number) => boolean,
+) => {
   const chat = ctx.chat;
   if (!chat) return false;
   if (chat.type === 'private') return true;

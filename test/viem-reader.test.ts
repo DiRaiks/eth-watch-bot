@@ -10,10 +10,11 @@ import {
   type PublicClient,
 } from 'viem';
 import { mainnet } from 'viem/chains';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { TOKEN_TOPICS } from '../src/scanner/token-logs.js';
 import { safeSymbol, viemReader } from '../src/scanner/viem-reader.js';
-import { ALICE, BOB, blockHash, txHash, USDC } from './helpers.js';
+import { ALICE, BOB, blockHash, CAROL, txHash, USDC } from './helpers.js';
 
 const TRANSFER = toEventSelector('Transfer(address,address,uint256)');
 const NFT = '0x2222222222222222222222222222222222222222';
@@ -158,11 +159,12 @@ describe('viemReader', () => {
     });
   });
 
-  it('returns ERC-20 transfers of a block and drops NFT transfers', async () => {
+  it('returns token transfers of a block, NFTs included', async () => {
     const requests: Request[] = [];
     const reader = viemReader(fakeRpc(requests));
-    expect(await reader.getTransferLogs(blockHash(100))).toEqual([
+    expect(await reader.getTokenLogs(blockHash(100))).toEqual([
       {
+        type: 'erc20',
         token: USDC,
         from: ALICE,
         to: BOB,
@@ -170,10 +172,23 @@ describe('viemReader', () => {
         transactionHash: txHash(1),
         logIndex: 0,
       },
+      {
+        type: 'nft',
+        token: NFT,
+        from: ALICE,
+        to: BOB,
+        tokenIds: [7n],
+        amounts: null,
+        transactionHash: txHash(1),
+        logIndex: 1,
+      },
     ]);
-    expect(requests.at(-1)?.params).toEqual([
-      { blockHash: blockHash(100), topics: [TRANSFER] },
-    ]);
+    expect(requests.at(-1)).toEqual({
+      method: 'eth_getLogs',
+      params: [
+        { blockHash: blockHash(100), topics: [Object.values(TOKEN_TOPICS)] },
+      ],
+    });
   });
 
   it('caches token info and survives tokens without metadata', async () => {
@@ -192,12 +207,39 @@ describe('viemReader', () => {
     });
   });
 
-  it('asks again for tokens whose metadata failed', async () => {
+  it('keeps incomplete token metadata for a while, not forever', async () => {
+    vi.useFakeTimers();
+    try {
+      const requests: Request[] = [];
+      const reader = viemReader(fakeRpc(requests));
+      await reader.getTokenInfo(BROKEN);
+      await reader.getTokenInfo(BROKEN);
+      expect(requests.filter((r) => r.method === 'eth_call')).toHaveLength(2);
+      vi.advanceTimersByTime(11 * 60_000);
+      await reader.getTokenInfo(BROKEN);
+      expect(requests.filter((r) => r.method === 'eth_call')).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('viemReader: balances and filters', () => {
+  it('reads balances at a block and answers null when the token cannot', async () => {
     const requests: Request[] = [];
     const reader = viemReader(fakeRpc(requests));
-    await reader.getTokenInfo(BROKEN);
-    await reader.getTokenInfo(BROKEN);
-    expect(requests.filter((r) => r.method === 'eth_call')).toHaveLength(4);
+    expect(await reader.getTokenBalance(BROKEN, ALICE, 99)).toBeNull();
+    expect(requests.at(-1)).toMatchObject({ method: 'eth_call' });
+    expect((requests.at(-1)?.params as unknown[])[1]).toBe(toHex(99));
+  });
+
+  it('skips logs of addresses nobody watches', async () => {
+    const reader = viemReader(fakeRpc([]));
+    const logs = await reader.getTokenLogs(
+      blockHash(100),
+      (address) => address.toLowerCase() === CAROL.toLowerCase(),
+    );
+    expect(logs).toEqual([]);
   });
 });
 

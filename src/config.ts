@@ -30,6 +30,10 @@ export type Config = {
   /** A scanner further behind than this skips to the recent blocks */
   maxLagBlocks: number;
   maxWatchesPerChat: number;
+  /** Look up unknown method names in the public signature database */
+  signatureLookup: boolean;
+  /** Show USD amounts, with prices from DefiLlama */
+  prices: boolean;
   /** Optional chat set up on start, e.g. the channel of the old bots */
   bootstrap: {
     chatId?: number;
@@ -165,6 +169,8 @@ export const loadConfig = (env: Env): Config => {
     maxBlocksPerTick: integer(env, 'MAX_BLOCKS_PER_TICK', 50, { min: 1 }),
     maxLagBlocks: integer(env, 'MAX_LAG_BLOCKS', 1000, { min: 1 }),
     maxWatchesPerChat: integer(env, 'MAX_WATCHES_PER_CHAT', 20, { min: 1 }),
+    signatureLookup: boolean(env, 'SIGNATURE_LOOKUP', true),
+    prices: boolean(env, 'PRICES', true),
     bootstrap: {
       chatId: bootstrapChat
         ? chatId(bootstrapChat, 'DEFAULT_CHANNEL_ID')
