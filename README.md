@@ -14,8 +14,8 @@ Ethereum, Base, Arbitrum and Optimism.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/chat-dark.svg" />
-    <img src="docs/chat-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address; the bot reports a USDC transfer with a mute button, raises an alert for an unlimited USDC approval with advice to revoke it, and after /messages on posts a birthday note found in a transaction" />
+    <source media="(prefers-color-scheme: dark)" srcset="docs/chat-en-dark.svg" />
+    <img src="docs/chat-en-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address; the bot reports a USDC transfer with a mute button, raises an alert for an unlimited USDC approval with advice to revoke it, and after /messages on posts a birthday note found in a transaction" />
   </picture>
 </p>
 
@@ -37,7 +37,7 @@ The bot speaks Russian; the picture shows its real texts.
 - **No missed or repeated blocks.** Each chain is scanned block by block after a few confirmations. Progress is saved after every block, so a restart or an RPC outage resumes where it stopped. After a long outage (over `MAX_LAG_BLOCKS`) it skips to recent blocks instead of replaying stale alerts.
 - **Readable messages only.** Text in transaction data is checked for real words; calldata, inscriptions, swap memos and ids are skipped. Each message is posted once, and the same text mailed by one sender to many addresses is posted once with the number of recipients.
 - **Flood guard.** Above five alerts for one chat, or five messages, in a block, the rest comes as a single summary. Token symbols are shown only when they look like tickers, so spam tokens cannot inject text.
-- **English or Russian.** `LANGUAGE=en` (default) or `LANGUAGE=ru` sets the language of messages, buttons and the bot's commands.
+- **English or Russian.** `LANGUAGE=en` (default) or `LANGUAGE=ru` sets the language of messages, buttons and commands, including the command menu.
 - **HTTP API.** `GET /v1/messages` returns recent messages; `GET /health` reports every chain's lag.
 
 ## Commands

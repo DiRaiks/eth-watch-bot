@@ -18,6 +18,8 @@ export const ru: Texts = {
       'Настройки: /settings · Все команды: /help',
     ].join('\n'),
   helpTitle: 'Команды:',
+  startCommand: 'Начать',
+  helpCommand: 'Список команд',
   forbidden: 'Эта команда вам недоступна.',
   adminsOnly: 'Это могут сделать только админы чата.',
 
