@@ -12,25 +12,16 @@ Ethereum, Base, Arbitrum and Optimism.
 
 </div>
 
-Add the bot to a chat, send `/watch vitalik.eth`, and the chat gets a message whenever the address moves ETH or tokens or calls a contract. Turn on `/messages` to also see the notes people leave in transaction data, the way they used to write on-chain graffiti.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/chat-dark.svg" />
+    <img src="docs/chat-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address, the bot then reports a USDC transfer with a mute button, and after /messages on posts a birthday note found in a transaction" />
+  </picture>
+</p>
 
-## What a chat sees
+Add the bot to a chat and send `/watch vitalik.eth`. From then on the chat gets a message whenever the address moves ETH or tokens or calls a contract, with a button to mute it for a day. Turn on `/messages` to also see the notes people leave in transaction data: birthday wishes, love letters, pleas to hackers, on-chain graffiti.
 
-```text
-🔔 Treasury · Ethereum
-⚙️ Call to contract 0xA0b8…eB48 · method 0xa9059cbb
-⬆️ Sent 250 000 USDC → 0x28C6…1d60
-Transaction · block 21 004 117
-                                        [ 🔕 Mute for 24 h ]
-```
-
-```text
-✉️ Message in block 21 004 120 · Ethereum
-│ Happy birthday, Alice. This one is forever.
-0x1f9a…02bc → 0xae7a…fE84 · Transaction
-```
-
-The bot speaks Russian; the samples above are translated.
+The bot speaks Russian; the picture shows its real texts.
 
 ## Features
 
@@ -55,7 +46,7 @@ The bot speaks Russian; the samples above are translated.
 | `/stats`                        | bot admins (`BOT_ADMINS`) | Chats, addresses, subscribers, chains           |
 | `/help`                         | everyone                  | Command list                                    |
 
-In private chats and channels everyone counts as an admin.
+In private chats everyone counts as an admin. In groups and channels it takes a chat admin, both for commands and for the mute buttons.
 
 ## How it works
 
