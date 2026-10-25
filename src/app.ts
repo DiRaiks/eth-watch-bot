@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import {
   tgBot,
+  tgHealth,
   tgNotifier,
   tgSubscriptions,
   type Html,
@@ -17,6 +18,7 @@ import { CHAINS, type ChainName } from './chains.js';
 import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
+import { createMetrics } from './metrics.js';
 import { setLanguage, t } from './i18n/index.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
 import { priceLookup, type PriceLookup } from './enrich/prices.js';
@@ -94,6 +96,15 @@ export const buildApp = async (options: AppOptions) => {
   });
   await app.register(tgNotifier, options.notifier ?? {});
 
+  // One registry for the bot and the kit; /metrics and /health are the bot's own routes
+  let scanners: BlockScanner[] = [];
+  const metrics = createMetrics(() => scanners);
+  await app.register(tgHealth, {
+    registry: metrics.registry,
+    healthPath: false,
+    metricsPath: false,
+  });
+
   const deliver: Deliver = async (chatId, message, sendOptions) => {
     if (!telegram) {
       app.log.info({ chatId, message: message.value }, 'notification');
@@ -139,6 +150,7 @@ export const buildApp = async (options: AppOptions) => {
       chains: config.messagesChains,
       store: stores.messages,
       broadcast,
+      onFound: metrics.messageFound,
     }),
     addressWatchHandler({
       watches,
@@ -153,11 +165,12 @@ export const buildApp = async (options: AppOptions) => {
             : null,
       digest,
       log: app.log,
+      onSent: metrics.notificationSent,
       now: options.now,
     }),
   ];
 
-  const scanners = config.chains.flatMap((chain) => {
+  scanners = config.chains.flatMap((chain) => {
     const reader = options.readers[chain.name];
     if (!reader) return [];
     return [
@@ -190,7 +203,12 @@ export const buildApp = async (options: AppOptions) => {
     scanners,
     messagesEnabled: config.messagesChains.length > 0,
   });
-  registerRoutes(app, { scanners, messages: stores.messages });
+  registerRoutes(app, {
+    scanners,
+    messages: stores.messages,
+    metrics: metrics.registry,
+    telegram,
+  });
 
   app.addHook('onReady', async () => {
     await bootstrapChat(app, watches, config.bootstrap);

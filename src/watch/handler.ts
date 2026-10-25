@@ -3,14 +3,19 @@ import type { FastifyBaseLogger } from 'fastify';
 import { InlineKeyboard } from 'grammy';
 import type { Address, Hex } from 'viem';
 
-import { CHAINS } from '../chains.js';
+import { CHAINS, type ChainName } from '../chains.js';
 import { callToken } from '../enrich/calldata.js';
 import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
 import { t } from '../i18n/index.js';
 import type { BlockHandler, ChainReader, TokenInfo } from '../scanner/types.js';
-import { collectActivity, mostImportant, type Activity } from './activity.js';
+import {
+  collectActivity,
+  mostImportant,
+  type Activity,
+  type Importance,
+} from './activity.js';
 import type { DigestService } from './digest.js';
 import {
   activityUsd,
@@ -255,6 +260,7 @@ export const addressWatchHandler = ({
   prices,
   digest,
   log,
+  onSent,
   now = Date.now,
 }: {
   watches: WatchService;
@@ -264,6 +270,8 @@ export const addressWatchHandler = ({
   prices: PriceLookup | null;
   digest?: DigestService;
   log?: FastifyBaseLogger;
+  /** Called for every transaction message sent to a chat, e.g. to count it */
+  onSent?: (chain: ChainName, importance: Importance) => void;
   now?: () => number;
 }): BlockHandler => ({
   name: 'address-watch',
@@ -413,6 +421,7 @@ export const addressWatchHandler = ({
       // Every alert rings, whatever the settings; the limit only stops forged floods
       for (const group of alerts.slice(0, MAX_ALERTS_PER_BLOCK)) {
         await send(chatId, message(group), options(group, false));
+        onSent?.(chain, group.importance);
       }
       if (alerts.length > MAX_ALERTS_PER_BLOCK) {
         await send(
@@ -428,6 +437,7 @@ export const addressWatchHandler = ({
 
       for (const group of others.slice(0, MAX_MESSAGES_PER_BLOCK)) {
         await send(chatId, message(group), options(group, quiet));
+        onSent?.(chain, group.importance);
       }
       if (others.length > MAX_MESSAGES_PER_BLOCK) {
         await send(
