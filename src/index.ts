@@ -1,10 +1,11 @@
 import { MongoClient } from 'mongodb';
-import { createPublicClient, http, type PublicClient } from 'viem';
+import { createPublicClient, type PublicClient } from 'viem';
 import { normalize } from 'viem/ens';
 
 import { buildApp } from './app.js';
 import { CHAINS, type ChainName } from './chains.js';
 import { ConfigError, loadConfig, type Config } from './config.js';
+import { checkRpcs, rpcTransport } from './rpc.js';
 import type { ChainReader } from './scanner/types.js';
 import { viemReader } from './scanner/viem-reader.js';
 import { memoryStores, mongoStores } from './storage.js';
@@ -29,19 +30,28 @@ if (process.env.NODE_ENV === 'production' && !config.mongoUri) {
   process.exit(1);
 }
 
-const clients = Object.fromEntries(
-  config.chains.map((chain) => [
-    chain.name,
-    createPublicClient({
-      chain: CHAINS[chain.name].viem,
-      transport: http(chain.rpcUrl, { retryCount: 2, timeout: 20_000 }),
-    }) as PublicClient,
-  ]),
-) as Partial<Record<ChainName, PublicClient>>;
-
-const readers = Object.fromEntries(
-  Object.entries(clients).map(([name, client]) => [name, viemReader(client)]),
-) as Partial<Record<ChainName, ChainReader>>;
+// RPCs of another network are left out of a list; reported once the logger exists
+const rpcWarnings: { chain: ChainName; host: string; chainId: number }[] = [];
+const clients: Partial<Record<ChainName, PublicClient>> = {};
+const readers: Partial<Record<ChainName, ChainReader>> = {};
+for (const chain of config.chains) {
+  const viemChain = CHAINS[chain.name].viem;
+  let urls = chain.rpcUrls;
+  if (urls.length > 1) {
+    const { usable, wrong } = await checkRpcs(urls, viemChain.id);
+    rpcWarnings.push(...wrong.map((rpc) => ({ chain: chain.name, ...rpc })));
+    // All of another network: keep them, the scanner stops with a clear error
+    if (usable.length) urls = usable;
+  }
+  const rpc = rpcTransport(urls);
+  const client = createPublicClient({
+    chain: viemChain,
+    transport: rpc.transport,
+  }) as PublicClient;
+  rpc.watch(client.transport);
+  clients[chain.name] = client;
+  readers[chain.name] = viemReader(client, rpc.current);
+}
 
 const mongo = config.mongoUri ? new MongoClient(config.mongoUri) : null;
 const stores = mongo ? await mongoStores(mongo.db()) : memoryStores();
@@ -62,6 +72,13 @@ const { app } = await buildApp({
         : { target: 'pino-pretty' },
   },
 });
+
+for (const { chain, host, chainId } of rpcWarnings) {
+  app.log.error(
+    { chain, rpc: host, chainId },
+    'RPC serves another network, left out',
+  );
+}
 
 if (!mongo) {
   app.log.warn('MONGO_URI is not set: chats and progress are kept in memory');

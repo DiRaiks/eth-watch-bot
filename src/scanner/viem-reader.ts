@@ -29,7 +29,10 @@ export const safeSymbol = (symbol: string) => {
   return SAFE_SYMBOL.test(trimmed) ? trimmed : '';
 };
 
-export const viemReader = (client: PublicClient): ChainReader => {
+export const viemReader = (
+  client: PublicClient,
+  rpcHost?: () => string | null,
+): ChainReader => {
   const tokens = new Map<
     Address,
     { until: number; info: Promise<TokenInfo> }
@@ -61,6 +64,7 @@ export const viemReader = (client: PublicClient): ChainReader => {
 
   return {
     getChainId: () => client.getChainId(),
+    ...(rpcHost && { rpcHost }),
 
     getBlockNumber: async () =>
       Number(await client.getBlockNumber({ cacheTime: 0 })),

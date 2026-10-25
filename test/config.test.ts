@@ -14,7 +14,11 @@ describe('loadConfig', () => {
       corsOrigins: [],
       bot: { token: undefined, mode: 'polling', admins: [] },
       chains: [
-        { name: 'ethereum', rpcUrl: 'https://eth.example', confirmations: 3 },
+        {
+          name: 'ethereum',
+          rpcUrls: ['https://eth.example'],
+          confirmations: 3,
+        },
       ],
       messagesChains: ['ethereum'],
       pollIntervalMs: 4000,
@@ -33,8 +37,28 @@ describe('loadConfig', () => {
 
   it('accepts the old single RPC_URL for Ethereum', () => {
     expect(loadConfig({ RPC_URL: 'https://old' }).chains).toEqual([
-      { name: 'ethereum', rpcUrl: 'https://old', confirmations: 3 },
+      { name: 'ethereum', rpcUrls: ['https://old'], confirmations: 3 },
     ]);
+  });
+
+  it('takes several RPC URLs of a chain, in order', () => {
+    expect(
+      loadConfig({
+        RPC_URL_ETHEREUM: ' https://a.example/key , https://b.example ,',
+      }).chains[0]?.rpcUrls,
+    ).toEqual(['https://a.example/key', 'https://b.example']);
+    expect(
+      loadConfig({ RPC_URL: 'https://old1,https://old2' }).chains[0]?.rpcUrls,
+    ).toEqual(['https://old1', 'https://old2']);
+  });
+
+  it('refuses an RPC that is not an http(s) URL', () => {
+    expect(() =>
+      loadConfig({ RPC_URL_ETHEREUM: 'https://a.example wss://b.example' }),
+    ).toThrow(ConfigError);
+    expect(() => loadConfig({ RPC_URL_BASE: 'base.example' })).toThrow(
+      /RPC_URL_BASE: "base.example" is not an http\(s\) URL/,
+    );
   });
 
   it('enables every chain with an RPC URL and reads per-chain confirmations', () => {
