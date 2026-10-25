@@ -83,6 +83,8 @@ export const buildApp = async (options: AppOptions) => {
     texts: {
       start: t.start(chainTitles),
       helpTitle: t.helpTitle,
+      startDescription: t.startCommand,
+      helpDescription: t.helpCommand,
       forbidden: t.forbidden,
     },
     ...options.bot,
