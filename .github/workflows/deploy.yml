@@ -1,0 +1,111 @@
+name: Deploy
+
+# Runs after CI passes on main, so a broken commit is never built or deployed
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  # The commit CI tested; a manual run deploys the commit it was started on
+  COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  image:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.COMMIT }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/eth-watch-bot
+          tags: |
+            type=raw,value=${{ env.COMMIT }}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    # Skipped until the server is configured (see deploy/README.md)
+    if: vars.DEPLOY_PATH != ''
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.COMMIT }}
+      - name: Upload compose files
+        # Third-party actions that receive the SSH key are pinned to a commit
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: deploy/compose.yml,deploy/Caddyfile
+          target: ${{ vars.DEPLOY_PATH }}
+          strip_components: 1
+          overwrite: true
+      - name: Pull and restart
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          IMAGE_REGISTRY: ${{ env.REGISTRY }}/${{ github.repository_owner }}
+          IMAGE_TAG: ${{ env.COMMIT }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DEPLOY_PATH,IMAGE_REGISTRY,IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+            test -f .env || { echo ".env is missing in $DEPLOY_PATH"; exit 1; }
+            registry=$(echo "$IMAGE_REGISTRY" | tr '[:upper:]' '[:lower:]')
+            printf 'IMAGE_REGISTRY=%s\nIMAGE_TAG=%s\n' "$registry" "$IMAGE_TAG" > images.env
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            compose="docker compose --env-file .env --env-file images.env"
+            $compose pull
+            $compose up -d --remove-orphans
+            docker logout ghcr.io
+            # wait for the container's own health check
+            for attempt in $(seq 1 30); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' "$($compose ps -q bot)")
+              [ "$status" = healthy ] && break
+              [ "$attempt" = 30 ] && { echo "bot is $status"; $compose logs --tail 50 bot; exit 1; }
+              sleep 5
+            done
+            echo "bot is healthy"
+            docker image prune -f

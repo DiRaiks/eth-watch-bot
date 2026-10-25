@@ -1,35 +1,20 @@
-FROM node:16-alpine as building
-
-ARG RPC_PRIVIDER
-ARG TELEGRAM_BOT_TOKEN
-ENV RPC_PRIVIDER=${RPC_PRIVIDER}
-ENV TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-ENV DEFAULT_CHANNEL_ID=${DEFAULT_CHANNEL_ID}
-ENV DEFAULT_ADDRESSES=${DEFAULT_ADDRESSES}
-ENV CHAIN_ID=${CHAIN_ID}
-
+FROM node:24-alpine AS build
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY tsconfig.json tsconfig.build.json ./
+COPY src src
+RUN npm run build && npm prune --omit=dev --ignore-scripts
 
-COPY package.json yarn.lock ./
-COPY ./tsconfig*.json ./
-COPY ./src ./src
-
-RUN echo "RPC_PRIVIDER: ${RPC_PRIVIDER}" > .env
-RUN echo "TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}" > .env
-RUN echo "DEFAULT_CHANNEL_ID: ${DEFAULT_CHANNEL_ID}" > .env
-RUN echo "DEFAULT_ADDRESSES: ${DEFAULT_ADDRESSES}" > .env
-RUN echo "CHAIN_ID: ${CHAIN_ID}" > .env
-RUN yarn install --frozen-lockfile --non-interactive && yarn cache clean
-RUN yarn build
-
-FROM node:16-alpine
-
+FROM node:24-alpine
 WORKDIR /app
-
-COPY --from=building /app/dist ./dist
-COPY --from=building /app/node_modules ./node_modules
-COPY ./package.json ./
-
+ENV NODE_ENV=production
+COPY --from=build /app/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
 USER node
-
-CMD ["yarn", "start:prod"]
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
+# Secrets (BOT_TOKEN, RPC URLs, MONGO_URI) come from the environment at runtime
+CMD ["node", "dist/index.js"]
