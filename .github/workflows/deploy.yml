@@ -96,6 +96,8 @@ jobs:
             cd "$DEPLOY_PATH"
             test -f .env || { echo ".env is missing in $DEPLOY_PATH"; exit 1; }
             registry=$(echo "$IMAGE_REGISTRY" | tr '[:upper:]' '[:lower:]')
+            # compose prefers the shell's variables to --env-file: export the lowercase one
+            export IMAGE_REGISTRY="$registry"
             printf 'IMAGE_REGISTRY=%s\nIMAGE_TAG=%s\n' "$registry" "$IMAGE_TAG" > images.env
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             compose="docker compose --env-file .env --env-file images.env"
