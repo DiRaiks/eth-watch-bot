@@ -17,9 +17,16 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # First-parent commits only: histories imported from the old bots keep their own messages
       - name: Check commit messages
         if: github.event_name == 'pull_request'
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for sha in $(git log --first-parent --format=%H "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" | npx --no-install commitlint
+          done
       - run: npm run lint
       - run: npm run format
       - run: npm run types
