@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     environment: 'node',
+    setupFiles: ['test/setup.ts'],
     coverage: {
       include: ['src/**'],
       // Process entry point: wiring of real RPC clients and MongoDB

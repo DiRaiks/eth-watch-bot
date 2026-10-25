@@ -6,6 +6,7 @@ import type { Address } from 'viem';
 
 import { addressLink, formatTime, replyHtml, truncate } from '../format.js';
 import type { ChainName } from '../chains.js';
+import { t } from '../i18n/index.js';
 import { MUTE_HOURS, watchLabel } from './handler.js';
 import { normalizeAddress, type WatchService } from './watch-service.js';
 
@@ -53,36 +54,29 @@ export const registerWatchCommands = (
   ): Promise<{ address: Address; ens?: string } | { error: string }> => {
     const address = normalizeAddress(input);
     if (address) return { address };
-    if (!input.includes('.'))
-      return {
-        error: 'Это не похоже на адрес: нужен 0x… из 40 символов или ENS-имя.',
-      };
-    if (!resolveName)
-      return { error: 'ENS-имена недоступны: боту не задан RPC Ethereum.' };
+    if (!input.includes('.')) return { error: t.notAnAddress };
+    if (!resolveName) return { error: t.ensUnavailable };
     const name = input.toLowerCase();
     try {
       const resolved = await resolveName(name);
       return resolved
         ? { address: resolved, ens: name }
-        : { error: `ENS-имя ${input} ни на что не указывает.` };
+        : { error: t.ensEmpty(input) };
     } catch {
-      return { error: `Не удалось разрешить ${input}, попробуйте позже.` };
+      return { error: t.ensFailed(input) };
     }
   };
 
   app.tg.command({
     command: 'watch',
-    description: 'Следить за адресом: /watch 0x… [метка]',
+    description: t.watchCommand,
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const [input, ...labelWords] = String(ctx.match ?? '')
         .trim()
         .split(/\s+/);
       if (!input) {
-        return replyHtml(
-          ctx,
-          html`Пришлите адрес или ENS-имя и, если хотите, метку:\n<code>/watch 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 Виталик</code>\n<code>/watch vitalik.eth</code>`,
-        );
+        return replyHtml(ctx, t.watchUsage);
       }
       const resolved = await resolve(input);
       if ('error' in resolved) return replyHtml(ctx, html`${resolved.error}`);
@@ -97,63 +91,49 @@ export const registerWatchCommands = (
         label || undefined,
       );
       if (result.status === 'limit') {
-        return replyHtml(
-          ctx,
-          html`В чате уже максимум адресов. Уберите лишние: /unwatch`,
-        );
+        return replyHtml(ctx, t.watchLimit);
       }
       const name = html`<b>${watchLabel(result.watch)}</b> (${addressLink(defaultChain, result.watch.address)})`;
       return replyHtml(
         ctx,
-        result.status === 'added'
-          ? html`👀 Слежу за ${name}. Сообщу о переводах ETH и токенов и о вызовах контрактов.`
-          : html`✏️ Метка обновлена: ${name}`,
+        result.status === 'added' ? t.watchAdded(name) : t.watchRelabeled(name),
       );
     },
   });
 
   app.tg.command({
     command: 'unwatch',
-    description: 'Перестать следить: /unwatch 0x… или метка',
+    description: t.unwatchCommand,
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const input = String(ctx.match ?? '').trim();
-      if (!input)
-        return replyHtml(
-          ctx,
-          html`Укажите адрес или метку: <code>/unwatch 0x…</code>`,
-        );
+      if (!input) return replyHtml(ctx, t.unwatchUsage);
       const removed = await watches.remove(ctx.chat!.id, input);
       return replyHtml(
         ctx,
-        removed
-          ? html`Больше не слежу за <b>${watchLabel(removed)}</b>.`
-          : html`Такого адреса нет в списке. Посмотреть список: /list`,
+        removed ? t.unwatched(watchLabel(removed)) : t.unwatchMissing,
       );
     },
   });
 
   app.tg.command({
     command: 'list',
-    description: 'Адреса, за которыми следит чат',
+    description: t.listCommand,
     handler: async (ctx) => {
       const list = await watches.list(ctx.chat!.id);
       if (!list.length) {
-        return replyHtml(
-          ctx,
-          html`Чат пока ни за кем не следит. Добавить адрес: /watch 0x…`,
-        );
+        return replyHtml(ctx, t.listEmpty);
       }
       const now = Date.now();
       return replyHtml(
         ctx,
         joinHtml([
-          html`<b>Адреса чата</b> (${list.length})`,
+          t.listTitle(list.length),
           ...list.map(
             (watch) =>
               html`• ${watch.label ? html`<b>${watch.label}</b> ` : ''}${addressLink(defaultChain, watch.address)}${
                 watch.mutedUntil && watch.mutedUntil > now
-                  ? html` · 🔕 до ${formatTime(watch.mutedUntil)}`
+                  ? t.mutedUntil(formatTime(watch.mutedUntil))
                   : ''
               }`,
           ),
@@ -181,27 +161,20 @@ export const registerWatchCommands = (
       const [, action, raw] = ctx.match;
       const address = normalizeAddress(raw!)!;
       if (!(await canManage(ctx, app.tg.isAdmin))) {
-        return ctx.answerCallbackQuery({
-          text: 'Это могут сделать только админы чата.',
-        });
+        return ctx.answerCallbackQuery({ text: t.adminsOnly });
       }
       const until =
         action === 'mute' ? Date.now() + MUTE_HOURS * 3_600_000 : null;
       const watch = await watches.mute(ctx.chat!.id, address, until);
       if (!watch) {
-        return ctx.answerCallbackQuery({
-          text: 'Чат больше не следит за этим адресом.',
-        });
+        return ctx.answerCallbackQuery({ text: t.notWatched });
       }
 
       const label = watchLabel(watch);
       const next: InlineKeyboardButton =
         until === null
-          ? {
-              text: `🔕 Заглушить на ${MUTE_HOURS} ч`,
-              callback_data: `mute:${address}`,
-            }
-          : { text: `🔔 Вернуть ${label}`, callback_data: `unmute:${address}` };
+          ? { text: t.mute(MUTE_HOURS), callback_data: `mute:${address}` }
+          : { text: t.unmute(label), callback_data: `unmute:${address}` };
       const keyboard = toggleButton(
         ctx.callbackQuery.message?.reply_markup?.inline_keyboard,
         ctx.callbackQuery.data,
@@ -216,9 +189,7 @@ export const registerWatchCommands = (
       }
       return ctx.answerCallbackQuery({
         text:
-          until === null
-            ? `${label}: уведомления снова включены`
-            : `${label}: тишина до ${formatTime(until)}`,
+          until === null ? t.unmuted(label) : t.muted(label, formatTime(until)),
       });
     },
   );

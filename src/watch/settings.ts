@@ -1,9 +1,10 @@
-import { html, joinHtml, type Html } from '@dirai/tg-kit';
+import { joinHtml, type Html } from '@dirai/tg-kit';
 import type { FastifyInstance } from 'fastify';
 import { InlineKeyboard, type Context } from 'grammy';
 
 import { CHAINS, isChainName, type ChainName } from '../chains.js';
 import { replyHtml } from '../format.js';
+import { t } from '../i18n/index.js';
 import { canManage } from './commands.js';
 import {
   formatTimeZone,
@@ -17,28 +18,26 @@ import type { WatchService } from './watch-service.js';
 
 const pad = (hour: number) => String(hour).padStart(2, '0');
 const quietText = (quiet: ChatPrefs['quiet']) =>
-  quiet ? `${pad(quiet.from)}:00–${pad(quiet.to)}:00` : 'выкл';
+  quiet ? `${pad(quiet.from)}:00–${pad(quiet.to)}:00` : t.off;
 const mark = (on: boolean, text: string) => (on ? `• ${text}` : text);
 
 export const settingsText = (prefs: ChatPrefs, chains: ChainName[]): Html =>
   joinHtml([
-    html`⚙️ <b>Настройки уведомлений</b>`,
-    html`Сети: ${
+    t.settingsTitle,
+    t.settingsChains(
       chains
         .filter((c) => !prefs.mutedChains.includes(c))
         .map((c) => CHAINS[c].title)
-        .join(', ') || 'ни одной'
-    }`,
-    html`Порог для входящих: ${prefs.minIncomingUsd ? `от $${prefs.minIncomingUsd}` : 'все'}`,
-    html`Тихие часы: ${quietText(prefs.quiet)} (${formatTimeZone(prefs.timeZone)}), уведомления без звука`,
-    html`Спам: ${prefs.spam === 'hide' ? 'скрывать' : 'показывать с пометкой'}`,
-    html`Режим: ${
-      prefs.mode === 'digest'
-        ? `входящие — сводкой в ${pad(prefs.digestHour)}:00`
-        : 'каждая транзакция'
-    }`,
+        .join(', '),
+    ),
+    t.settingsThreshold(prefs.minIncomingUsd),
+    t.settingsQuiet(quietText(prefs.quiet), formatTimeZone(prefs.timeZone)),
+    t.settingsSpam(prefs.spam === 'hide'),
+    t.settingsMode(
+      prefs.mode === 'digest' ? `${pad(prefs.digestHour)}:00` : null,
+    ),
     '',
-    html`<i>Исходящие переводы, разрешения на токены и списания не вами приходят всегда, со звуком и без порога.</i>`,
+    t.settingsNote,
   ]);
 
 export const settingsKeyboard = (prefs: ChatPrefs, chains: ChainName[]) => {
@@ -57,13 +56,13 @@ export const settingsKeyboard = (prefs: ChatPrefs, chains: ChainName[]) => {
     keyboard.text(
       mark(
         prefs.minIncomingUsd === threshold,
-        threshold ? `от $${threshold}` : 'Все входящие',
+        threshold ? t.fromUsd(threshold) : t.allIncoming,
       ),
       `set:min:${threshold}`,
     );
   }
   keyboard.row();
-  keyboard.text(mark(prefs.quiet === null, 'Без тихих часов'), 'set:quiet:off');
+  keyboard.text(mark(prefs.quiet === null, t.noQuietHours), 'set:quiet:off');
   for (const preset of QUIET_PRESETS) {
     const on =
       prefs.quiet?.from === preset.from && prefs.quiet.to === preset.to;
@@ -79,13 +78,13 @@ export const settingsKeyboard = (prefs: ChatPrefs, chains: ChainName[]) => {
     .text('▶', 'set:tz:next')
     .row();
   keyboard
-    .text(mark(prefs.spam === 'show', 'Спам с пометкой'), 'set:spam:show')
-    .text(mark(prefs.spam === 'hide', 'Скрывать спам'), 'set:spam:hide')
+    .text(mark(prefs.spam === 'show', t.spamShown), 'set:spam:show')
+    .text(mark(prefs.spam === 'hide', t.spamHidden), 'set:spam:hide')
     .row();
   keyboard
-    .text(mark(prefs.mode === 'each', 'Каждая транзакция'), 'set:mode:each')
+    .text(mark(prefs.mode === 'each', t.everyTransaction), 'set:mode:each')
     .text(
-      mark(prefs.mode === 'digest', `Сводка в ${pad(prefs.digestHour)}:00`),
+      mark(prefs.mode === 'digest', t.digestAt(`${pad(prefs.digestHour)}:00`)),
       'set:mode:digest',
     );
   return keyboard;
@@ -155,7 +154,7 @@ export const registerSettings = (
 
   app.tg.command({
     command: 'settings',
-    description: 'Настройки уведомлений: сети, порог, тихие часы, сводка',
+    description: t.settingsCommand,
     scope: 'chatAdmin',
     handler: (ctx) => {
       const { text, keyboard } = render(watches.prefs(ctx.chat!.id));
@@ -167,9 +166,7 @@ export const registerSettings = (
     const data = ctx.callbackQuery?.data ?? '';
     if (data === 'set:noop') return ctx.answerCallbackQuery();
     if (!(await canManage(ctx, app.tg.isAdmin))) {
-      return ctx.answerCallbackQuery({
-        text: 'Это могут сделать только админы чата.',
-      });
+      return ctx.answerCallbackQuery({ text: t.adminsOnly });
     }
     const chatId = ctx.chat!.id;
     const { prefs, changed } = await watches.setPrefs(chatId, (current) =>
@@ -186,6 +183,6 @@ export const registerSettings = (
         link_preview_options: { is_disabled: true },
       })
       .catch(() => undefined);
-    return ctx.answerCallbackQuery({ text: 'Сохранено' });
+    return ctx.answerCallbackQuery({ text: t.saved });
   });
 };

@@ -7,40 +7,40 @@
 <circle cx="40" cy="30" r="20" fill="#3e8ee0"/>
 <text x="40" y="36" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">EW</text>
 <text x="72" y="26" font-size="16" font-weight="600" fill="#000000">ETH Watch Bot</text>
-<text x="72" y="45" font-size="13" fill="#8a979f">бот</text>
+<text x="72" y="45" font-size="13" fill="#8a979f">bot</text>
 <rect x="434" y="81" width="270" height="40" rx="14" fill="#00000022"/><rect x="434" y="80" width="270" height="40" rx="14" fill="#e2ffc7"/>
-<text x="448" y="105" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">/watch vitalik.eth Виталик</tspan></text>
+<text x="448" y="105" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">/watch vitalik.eth Vitalik</tspan></text>
 <text x="694" y="113" font-size="12" fill="#8a979f" text-anchor="end">20:41</text>
 <rect x="16" y="137" width="540" height="64" rx="14" fill="#00000022"/><rect x="16" y="136" width="540" height="64" rx="14" fill="#ffffff"/>
-<text x="30" y="161" font-size="15" xml:space="preserve"><tspan fill="#000000">👀 Слежу за </tspan><tspan fill="#000000" font-weight="600">Виталик</tspan><tspan fill="#000000"> (</tspan><tspan fill="#2a7ab8">0xd8dA…6045</tspan><tspan fill="#000000">). Сообщу о переводах ETH</tspan></text>
-<text x="30" y="184" font-size="15" xml:space="preserve"><tspan fill="#000000">и токенов и о вызовах контрактов.</tspan></text>
+<text x="30" y="161" font-size="15" xml:space="preserve"><tspan fill="#000000">👀 Watching </tspan><tspan fill="#000000" font-weight="600">Vitalik</tspan><tspan fill="#000000"> (</tspan><tspan fill="#2a7ab8">0xd8dA…6045</tspan><tspan fill="#000000">). I will report ETH and token</tspan></text>
+<text x="30" y="184" font-size="15" xml:space="preserve"><tspan fill="#000000">transfers and contract calls.</tspan></text>
 <text x="546" y="191" font-size="12" fill="#8a979f" text-anchor="end">20:41</text>
 <rect x="16" y="217" width="540" height="136" rx="14" fill="#00000022"/><rect x="16" y="216" width="540" height="136" rx="14" fill="#ffffff"/>
-<text x="30" y="242" font-size="15" xml:space="preserve"><tspan fill="#000000">🔔 </tspan><tspan fill="#000000" font-weight="600">Виталик</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
-<text x="30" y="266" font-size="15" xml:space="preserve"><tspan fill="#000000">⚙️ Вызов </tspan><tspan fill="#2a7ab8">0xA0b8…eB48</tspan><tspan fill="#000000"> · </tspan><tspan fill="#000000" font-weight="600">transfer</tspan><tspan fill="#000000">(to </tspan><tspan fill="#2a7ab8">0x28C6…1d60</tspan><tspan fill="#000000">,</tspan></text>
-<text x="30" y="290" font-size="15" xml:space="preserve"><tspan fill="#000000">amount 250 000 USDC)</tspan></text>
-<text x="30" y="314" font-size="15" xml:space="preserve"><tspan fill="#000000">⬆️ Отправлено </tspan><tspan fill="#000000" font-weight="600">250 000</tspan><tspan fill="#000000"> </tspan><tspan fill="#2a7ab8">USDC</tspan><tspan fill="#000000"> ($249 900) → </tspan><tspan fill="#2a7ab8">0x28C6…1d60</tspan></text>
-<text x="30" y="338" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">Транзакция</tspan><tspan fill="#000000"> · блок 21 004 117</tspan></text>
+<text x="30" y="242" font-size="15" xml:space="preserve"><tspan fill="#000000">🔔 </tspan><tspan fill="#000000" font-weight="600">Vitalik</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
+<text x="30" y="266" font-size="15" xml:space="preserve"><tspan fill="#000000">⚙️ Call to </tspan><tspan fill="#2a7ab8">0xA0b8…eB48</tspan><tspan fill="#000000"> · </tspan><tspan fill="#000000" font-weight="600">transfer</tspan><tspan fill="#000000">(to </tspan><tspan fill="#2a7ab8">0x28C6…1d60</tspan><tspan fill="#000000">,</tspan></text>
+<text x="30" y="290" font-size="15" xml:space="preserve"><tspan fill="#000000">amount 250,000 USDC)</tspan></text>
+<text x="30" y="314" font-size="15" xml:space="preserve"><tspan fill="#000000">⬆️ Sent </tspan><tspan fill="#000000" font-weight="600">250,000</tspan><tspan fill="#000000"> </tspan><tspan fill="#2a7ab8">USDC</tspan><tspan fill="#000000"> ($249,900) → </tspan><tspan fill="#2a7ab8">0x28C6…1d60</tspan></text>
+<text x="30" y="338" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">Transaction</tspan><tspan fill="#000000"> · block 21,004,117</tspan></text>
 <text x="546" y="343" font-size="12" fill="#8a979f" text-anchor="end">20:58</text>
 <rect x="16" y="358" width="540" height="40" rx="10" fill="#000000" fill-opacity="0.18"/>
-<text x="286" y="383" font-size="15" font-weight="500" fill="#ffffff" text-anchor="middle">🔕 Заглушить на 24 ч</text>
+<text x="286" y="383" font-size="15" font-weight="500" fill="#ffffff" text-anchor="middle">🔕 Mute for 24 h</text>
 <rect x="16" y="415" width="540" height="184" rx="14" fill="#00000022"/><rect x="16" y="414" width="540" height="184" rx="14" fill="#ffffff"/>
-<text x="30" y="440" font-size="15" xml:space="preserve"><tspan fill="#000000">🚨 </tspan><tspan fill="#000000" font-weight="600">Виталик</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
-<text x="30" y="464" font-size="15" xml:space="preserve"><tspan fill="#000000">🚨 Разрешение: </tspan><tspan fill="#2a7ab8">0x9a3D…5768</tspan><tspan fill="#000000"> может тратить </tspan><tspan fill="#000000" font-weight="600">все</tspan><tspan fill="#000000"> ваши </tspan><tspan fill="#2a7ab8">USDC</tspan></text>
-<text x="30" y="488" font-size="15" xml:space="preserve"><tspan fill="#000000">⚙️ Вызов </tspan><tspan fill="#2a7ab8">0xA0b8…eB48</tspan><tspan fill="#000000"> · ⚠️ </tspan><tspan fill="#000000" font-weight="600">approve</tspan><tspan fill="#000000">(spender </tspan><tspan fill="#2a7ab8">0x9a3D…5768</tspan><tspan fill="#000000">,</tspan></text>
-<text x="30" y="512" font-size="15" xml:space="preserve"><tspan fill="#000000">amount </tspan><tspan fill="#000000" font-weight="600">все</tspan><tspan fill="#000000">)</tspan></text>
-<text x="30" y="538" font-size="15" xml:space="preserve"><tspan fill="#8a979f" font-style="italic" font-size="14">Если это были не вы: отзовите разрешения (revoke.cash)</tspan></text>
-<text x="30" y="560" font-size="15" xml:space="preserve"><tspan fill="#8a979f" font-style="italic" font-size="14">и выведите средства на новый кошелёк.</tspan></text>
-<text x="30" y="586" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">Транзакция</tspan><tspan fill="#000000"> · блок 21 004 131</tspan></text>
+<text x="30" y="440" font-size="15" xml:space="preserve"><tspan fill="#000000">🚨 </tspan><tspan fill="#000000" font-weight="600">Vitalik</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
+<text x="30" y="464" font-size="15" xml:space="preserve"><tspan fill="#000000">🚨 Approval: </tspan><tspan fill="#2a7ab8">0x9a3D…5768</tspan><tspan fill="#000000"> can spend </tspan><tspan fill="#000000" font-weight="600">all</tspan><tspan fill="#000000"> your </tspan><tspan fill="#2a7ab8">USDC</tspan></text>
+<text x="30" y="488" font-size="15" xml:space="preserve"><tspan fill="#000000">⚙️ Call to </tspan><tspan fill="#2a7ab8">0xA0b8…eB48</tspan><tspan fill="#000000"> · ⚠️ </tspan><tspan fill="#000000" font-weight="600">approve</tspan><tspan fill="#000000">(spender </tspan><tspan fill="#2a7ab8">0x9a3D…5768</tspan><tspan fill="#000000">,</tspan></text>
+<text x="30" y="512" font-size="15" xml:space="preserve"><tspan fill="#000000">amount </tspan><tspan fill="#000000" font-weight="600">all</tspan><tspan fill="#000000">)</tspan></text>
+<text x="30" y="538" font-size="15" xml:space="preserve"><tspan fill="#8a979f" font-style="italic" font-size="14">If this was not you: revoke the approvals (revoke.cash)</tspan></text>
+<text x="30" y="560" font-size="15" xml:space="preserve"><tspan fill="#8a979f" font-style="italic" font-size="14">and move the funds to a new wallet.</tspan></text>
+<text x="30" y="586" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">Transaction</tspan><tspan fill="#000000"> · block 21,004,131</tspan></text>
 <text x="546" y="589" font-size="12" fill="#8a979f" text-anchor="end">21:02</text>
 <rect x="564" y="617" width="140" height="40" rx="14" fill="#00000022"/><rect x="564" y="616" width="140" height="40" rx="14" fill="#e2ffc7"/>
 <text x="578" y="641" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">/messages on</tspan></text>
 <rect x="16" y="673" width="540" height="138" rx="14" fill="#00000022"/><rect x="16" y="672" width="540" height="138" rx="14" fill="#ffffff"/>
-<text x="30" y="698" font-size="15" xml:space="preserve"><tspan fill="#000000">✉️ </tspan><tspan fill="#000000" font-weight="600">Сообщение в блоке 21 004 120</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
+<text x="30" y="698" font-size="15" xml:space="preserve"><tspan fill="#000000">✉️ </tspan><tspan fill="#000000" font-weight="600">Message in block 21,004,120</tspan><tspan fill="#000000"> · Ethereum</tspan></text>
 <rect x="30" y="710" width="512" height="56" rx="6" fill="#e8f2fb"/>
 <rect x="30" y="710" width="3" height="56" rx="1.5" fill="#2a7ab8"/>
-<text x="44" y="733" font-size="15" xml:space="preserve"><tspan fill="#000000">С днём рождения, Аня! Пусть эта строчка</tspan></text>
-<text x="44" y="755" font-size="15" xml:space="preserve"><tspan fill="#000000">останется в блокчейне навсегда.</tspan></text>
-<text x="30" y="790" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">0x1f9a…02bc</tspan><tspan fill="#000000"> → </tspan><tspan fill="#2a7ab8">0xae7a…fE84</tspan><tspan fill="#000000"> · </tspan><tspan fill="#2a7ab8">Транзакция</tspan></text>
+<text x="44" y="733" font-size="15" xml:space="preserve"><tspan fill="#000000">Happy birthday, Anya! May this line stay</tspan></text>
+<text x="44" y="755" font-size="15" xml:space="preserve"><tspan fill="#000000">on the blockchain forever.</tspan></text>
+<text x="30" y="790" font-size="15" xml:space="preserve"><tspan fill="#2a7ab8">0x1f9a…02bc</tspan><tspan fill="#000000"> → </tspan><tspan fill="#2a7ab8">0xae7a…fE84</tspan><tspan fill="#000000"> · </tspan><tspan fill="#2a7ab8">Transaction</tspan></text>
 <text x="546" y="801" font-size="12" fill="#8a979f" text-anchor="end">21:03</text>
 </g></svg>

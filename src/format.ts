@@ -3,12 +3,13 @@ import type { Context } from 'grammy';
 import { formatUnits } from 'viem';
 
 import { addressUrl, txUrl, type ChainName } from './chains.js';
+import { t } from './i18n/index.js';
 
 export const shortAddress = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(-4)}`;
 
 export const groupThousands = (integer: string) =>
-  integer.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  integer.replace(/\B(?=(\d{3})+(?!\d))/g, t.thousandsSeparator);
 
 /**
  * Human amount: up to 4 decimals for amounts of 1 and more, 4 significant digits for
@@ -37,16 +38,20 @@ export const addressLink = (chain: ChainName, address: string): Html =>
 export const txLink = (
   chain: ChainName,
   hash: string,
-  label = 'Транзакция',
+  label = t.transaction,
 ): Html => html`<a href="${txUrl(chain, hash)}">${label}</a>`;
 
 export const formatBlock = (number: number) => groupThousands(String(number));
 
-/** "25.10 14:00 UTC" */
+/** "25 Oct 14:00 UTC", "25.10 14:00 UTC" */
 export const formatTime = (ms: number) => {
   const date = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`;
+  return t.time(
+    date.getUTCDate(),
+    date.getUTCMonth(),
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`,
+  );
 };
 
 /** Cuts by code points, so emoji and other surrogate pairs stay whole */

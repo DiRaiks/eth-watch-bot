@@ -5,6 +5,7 @@ import type { Address, Hash } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
 import { addressLink } from '../format.js';
+import { t } from '../i18n/index.js';
 import { formatUsd, watchLabel } from './messages.js';
 import { localDay, localHour } from './prefs.js';
 import type { WatchService } from './watch-service.js';
@@ -97,7 +98,7 @@ export const formatDigest = (
   defaultChain: ChainName,
 ): Html => {
   if (!entries.length) {
-    return html`📋 <b>Сводка за сутки</b>\nВходящих транзакций не было.`;
+    return joinHtml([t.digestTitle, t.digestEmpty]);
   }
   const byAddress = new Map<string, DigestEntry[]>();
   for (const entry of entries) {
@@ -111,15 +112,11 @@ export const formatDigest = (
     const chains = [
       ...new Set(items.map((item) => CHAINS[item.chain].title)),
     ].join(', ');
-    return html`<b>${label(first.address)}</b> (${addressLink(defaultChain, first.address)}): ${transactions} входящих${
-      usd > 0 ? html` на ~${formatUsd(usd)}` : ''
+    return html`<b>${label(first.address)}</b> (${addressLink(defaultChain, first.address)}): ${t.digestIncoming(transactions)}${
+      usd > 0 ? t.digestWorth(formatUsd(usd)) : ''
     } · ${chains}`;
   });
-  return joinHtml([
-    html`📋 <b>Сводка за сутки</b>`,
-    ...lines,
-    html`<i>Исходящие транзакции и разрешения приходят сразу, не в сводке.</i>`,
-  ]);
+  return joinHtml([t.digestTitle, ...lines, t.digestNote]);
 };
 
 /** Sends each digest chat its summary once a day, at the chat's local digest hour */
