@@ -1,0 +1,22 @@
+version: '3.7'
+
+services:
+  main:
+    container_name: main
+    build: ./
+    restart: always
+    environment:
+      - RPC_PRIVIDER=${RPC_PRIVIDER}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DEFAULT_CHANNEL_ID=${DEFAULT_CHANNEL_ID}
+      - EL_RPC_URLS=${EL_RPC_URLS}
+      - CHAIN_ID=${CHAIN_ID}
+      - PORT=${PORT}
+      - GLOBAL_THROTTLE_TTL=${GLOBAL_THROTTLE_TTL}
+      - GLOBAL_THROTTLE_LIMIT=${GLOBAL_THROTTLE_LIMIT}
+      - GLOBAL_CACHE_TTL=${GLOBAL_CACHE_TTL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - CORS_WHITELIST_REGEXP=${CORS_WHITELIST_REGEXP}
+    ports:
+      - '3000:3000'
