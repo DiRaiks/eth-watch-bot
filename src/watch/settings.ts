@@ -19,7 +19,8 @@ import type { WatchService } from './watch-service.js';
 const pad = (hour: number) => String(hour).padStart(2, '0');
 const quietText = (quiet: ChatPrefs['quiet']) =>
   quiet ? `${pad(quiet.from)}:00–${pad(quiet.to)}:00` : t.off;
-const mark = (on: boolean, text: string) => (on ? `• ${text}` : text);
+// The chosen option of a row, marked like an enabled chain
+const mark = (on: boolean, text: string) => (on ? `✅ ${text}` : text);
 
 export const settingsText = (prefs: ChatPrefs, chains: ChainName[]): Html =>
   joinHtml([

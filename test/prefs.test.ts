@@ -165,9 +165,12 @@ describe('settings buttons', () => {
       expect.arrayContaining([
         '✅ Ethereum',
         '▫️ Base',
-        '• от $10',
-        '• 🌙 23:00–08:00',
+        '✅ от $10',
+        '✅ 🌙 23:00–08:00',
         '🕒 Moscow, GMT+3',
+        // Options not chosen carry no mark
+        'от $100',
+        'Без тихих часов',
       ]),
     );
     // A single chain needs no chain buttons
