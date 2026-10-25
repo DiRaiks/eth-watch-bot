@@ -15,25 +15,29 @@ Ethereum, Base, Arbitrum and Optimism.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/chat-en-dark.svg" />
-    <img src="docs/chat-en-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address; the bot reports a USDC transfer with a mute button, raises an alert for an unlimited USDC approval with advice to revoke it, and after /messages on posts a birthday note found in a transaction" />
+    <img src="docs/chat-en-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address; the bot reports an outgoing USDC transfer with the decoded call, a first-time recipient, the fee, the balance and the block time, and a mute button; an alert for a token approval shows only its first line with the details under a spoiler, advice and a revoke.cash link; after /messages on it posts a birthday note found in a transaction" />
   </picture>
 </p>
 
 Watch your own wallets and learn about any transaction you did not make. Add the bot to a chat and send `/watch 0x…`: from then on the chat hears about every transfer of ETH, tokens and NFTs, every contract call, and every approval that lets someone else spend your tokens. Turn on `/messages` to also see the notes people leave in transaction data: birthday wishes, love letters, pleas to hackers, on-chain graffiti.
 
-Each chat gets English or Russian: the user's Telegram language, or the one chosen in `/settings`; `LANGUAGE` sets the default. The picture shows its real English texts.
+Each chat gets English or Russian: the user's Telegram language, or the one chosen in `/settings`; `LANGUAGE` sets the default. The picture shows its real English texts: the first alert with details shown, the second as by default, under a spoiler.
 
 ## Features
 
 - **Addresses and ENS names.** `/watch 0x…` or `/watch vitalik.eth`, with an optional label. Any letter case works.
-- **Everything an address does.** ETH, ERC-20, ERC-721 and ERC-1155 transfers in and out, contract calls, contract creation. One message per transaction, however many watched addresses it touches, with amounts in dollars.
-- **Signs of a compromised wallet.** 🚨 alerts for token approvals (unlimited ones called out), Permit2 allowances granted by signing a message, collection-wide NFT approvals, and tokens that leave the wallet in a transaction someone else sent: the way drainers empty wallets. Alerts get through mutes, muted chains, quiet hours, thresholds and the digest, and say what to do next.
+- **Everything an address does.** ETH, ERC-20, ERC-721 and ERC-1155 transfers in and out, contract calls (also those that send ETH, such as staking), contract creation. One message per transaction, however many watched addresses it touches, with amounts in dollars.
+- **What the transaction did and cost.** A failed transaction is marked as such: nothing moved, the fee was paid. Outgoing transactions show their fee in ETH and dollars, with the L1 fee of Base and Optimism; the message also gives the ETH balance after the block and the block time in the chat's time zone.
+- **Who is on the other side.** Well-known contracts (Lido, WETH, Permit2) appear by name, other contracts are marked as contracts, and a recipient or spender the address has never paid or approved before is marked 🆕 first time, the usual sign of address poisoning. Only the owner's own transactions count, so a forged event cannot make a look-alike familiar; the bot knows contacts from the moment it starts watching.
+- **Private at a glance.** The first line of an alert names only the address, the chain and the event (outgoing, incoming, token approval, taken without you). Amounts, addresses and the link sit under a spoiler, so the chat list and a glance at the screen show nothing more; `/settings` can show them openly.
+- **Signs of a compromised wallet.** 🚨 alerts for token approvals (unlimited ones called out), Permit2 allowances granted by signing a message, collection-wide NFT approvals, and tokens that leave the wallet in a transaction someone else sent: the way drainers empty wallets. Alerts get through mutes, muted chains, quiet hours, thresholds and the digest, and say what to do next; approval alerts link to revoke.cash for the address and chain.
 - **No panic over forgeries.** Any contract can emit an event that names your address. An alarming event about a token you never held, with no market price, is shown as a likely fake instead of an alert. The allowance a swap spends is not reported as a new approval.
 - **Address poisoning.** Zero-value "transfers" from your address to a look-alike one are marked as fake, so you do not copy the attacker's address from your history.
 - **Readable contract calls.** Common methods are named from a built-in list; others come from the public signature database, only from verified contracts, and are shown as a hint since anyone can register a name. The call's parameters are decoded too: `transfer(to 0x28C6…1d60, amount 250,000 USDC)`, `approve(spender 0x9a3D…5768, amount all)`. Token amounts use the token's decimals, addresses link to the explorer, long values are shortened; parameter names are shown only for built-in methods. Calldata that does not fit the signature falls back to the name alone.
 - **Several chats, one address.** Every chat watching an address gets its own notification.
 - **Mute from the message.** A button under each notification silences the address for 24 hours; another brings it back.
-- **Settings per chat.** `/settings`: which chains, a dollar threshold for incoming transfers, quiet hours in the chat's time zone (messages arrive without a sound; alerts still ring), spam shown with a warning or hidden, and a daily digest instead of a message per incoming transaction. The digest comes at 09:00 in the chat's time zone (Moscow until changed in `/settings`); the hour itself is fixed.
+- **Settings per chat.** `/settings`: which chains, a dollar threshold for incoming transfers, quiet hours in the chat's time zone (messages arrive without a sound; alerts still ring), spam shown with a warning or hidden, a daily digest instead of a message per incoming transaction, details under a spoiler or shown, and the chat's language. The digest comes at 09:00 in the chat's time zone (Moscow until changed in `/settings`); the hour itself is fixed.
+- **Several RPCs per chain.** List free RPCs comma-separated: when one fails or hits its limits, the next answers, and the first is preferred again once it is back. An RPC of another network in the list is left out at start.
 - **No missed or repeated blocks.** Each chain is scanned block by block after a few confirmations. Progress is saved after every block, so a restart or an RPC outage resumes where it stopped. After a long outage (over `MAX_LAG_BLOCKS`) it skips to recent blocks instead of replaying stale alerts.
 - **Readable messages only.** Text in transaction data is checked for real words; calldata, inscriptions, swap memos and ids are skipped. Each message is posted once, and the same text mailed by one sender to many addresses is posted once with the number of recipients.
 - **Flood guard.** Above five alerts for one chat, or five messages, in a block, the rest comes as a single summary. Token symbols are shown only when they look like tickers, so spam tokens cannot inject text.
@@ -48,7 +52,7 @@ Each chat gets English or Russian: the user's Telegram language, or the one chos
 | `/watch <address\|ens> [label]` | chat admins               | Watch an address, or change its label                                                |
 | `/unwatch <address\|label>`     | chat admins               | Stop watching                                                                        |
 | `/list`                         | everyone                  | Watched addresses and their mute state                                               |
-| `/settings`                     | chat admins               | Chains, threshold, quiet hours, spam, digest                                         |
+| `/settings`                     | chat admins               | Chains, threshold, quiet hours, spam, digest, details, language                      |
 | `/messages on\|off`             | chat admins               | Messages from transaction data                                                       |
 | `/status`                       | everyone                  | What this chat follows, how each chain is doing                                      |
 | `/stats`                        | bot admins (`BOT_ADMINS`) | Chats, addresses, subscribers, chains                                                |
@@ -65,16 +69,17 @@ flowchart LR
   subgraph bot["eth-watch-bot"]
     scanner["BlockScanner<br/><sub>one per chain, confirmations,<br/>checkpoint after each block</sub>"]
     watch["address-watch<br/><sub>txs, token transfers, approvals;<br/>chat settings, digest</sub>"]
-    enrich["enrichment<br/><sub>method names, USD prices</sub>"]
+    enrich["enrichment<br/><sub>method names, USD prices,<br/>receipts, balances, contracts</sub>"]
     messages["block-messages<br/><sub>UTF-8 text in tx input</sub>"]
     kit["@dirai/tg-kit<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
     api["Fastify<br/><sub>/v1/messages, /health, /metrics</sub>"]
   end
-  db[("Postgres<br/><sub>chats, checkpoints, messages, digests</sub>")]
+  db[("Postgres<br/><sub>chats, checkpoints, messages,<br/>digests, contacts</sub>")]
   tg["Telegram"]
 
   rpc --> scanner --> watch & messages
   watch --- enrich
+  watch --- db
   watch & messages --> kit --> tg
   scanner --- db
   kit --- db
