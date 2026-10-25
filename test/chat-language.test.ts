@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DEFAULT_PREFS, readPrefs } from '../src/watch/prefs.js';
-import { ALICE, BOB, buildTestApp, callback, message, tx } from './helpers.js';
+import {
+  ADMIN_ID,
+  ALICE,
+  BOB,
+  buildTestApp,
+  callback,
+  message,
+  textInput,
+  tx,
+} from './helpers.js';
 
 type TestApp = Awaited<ReturnType<typeof buildTestApp>>;
 let current: TestApp | undefined;
@@ -76,6 +85,45 @@ describe('language of a chat', () => {
     // A chosen language wins over the user's Telegram one
     await send(t, message('/status', { languageCode: 'ru' }));
     expect(t.api.texts().at(-1)).toContain('This chat');
+  });
+
+  it('posts messages from transactions to each chat in its language', async () => {
+    const t = await start();
+    await send(t, message('/messages on', { chatId: 1 }));
+    await send(t, message('/messages on', { chatId: 2 }));
+    await send(t, message('/settings', { chatId: 2 }));
+    const keyboard = t.api.sent().at(-1)?.payload.reply_markup as {
+      inline_keyboard: { text: string; callback_data: string }[][];
+    };
+    await send(
+      t,
+      callback('set:lang:en', keyboard.inline_keyboard, { chatId: 2 }),
+    );
+    t.api.clear();
+
+    await mine(t, [tx(1, { input: textInput('gm from the chain') })]);
+    const byChat = new Map(
+      t.api.sent().map((c) => [c.payload.chat_id, String(c.payload.text)]),
+    );
+    expect(byChat.get(1)).toContain('Сообщение в блоке');
+    expect(byChat.get(2)).toContain('Message in block');
+  });
+
+  it('keeps a group on the default language whoever adds an address', async () => {
+    const t = await start();
+    await send(
+      t,
+      message(`/watch ${ALICE}`, {
+        chatId: -5,
+        chatType: 'group',
+        languageCode: 'en',
+        userId: ADMIN_ID,
+      }),
+    );
+    const alert = await mine(t, [
+      tx(1, { from: ALICE, to: BOB, value: 10n ** 15n }),
+    ]);
+    expect(alert).toContain('Отправлено');
   });
 
   it('reads only known languages from storage', () => {

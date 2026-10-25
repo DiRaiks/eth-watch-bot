@@ -93,13 +93,22 @@ export const registerWatchCommands = (
       if (result.status === 'limit') {
         return replyHtml(ctx, t.watchLimit);
       }
-      // Alerts come without a user to read the language from: keep the one replies use
+      // Alerts come without a user to read the language from: keep the one replies use.
+      // Only in a private chat: in a group one admin's language is not everyone's.
       const chatId = ctx.chat!.id;
       const spoken = languageOf(ctx.from?.language_code);
-      if (spoken && !watches.prefs(chatId).language) {
-        await watches.setPrefs(chatId, (prefs) =>
-          prefs.language ? null : { language: spoken },
-        );
+      if (
+        ctx.chat?.type === 'private' &&
+        spoken &&
+        !watches.prefs(chatId).language
+      ) {
+        await watches
+          .setPrefs(chatId, (prefs) =>
+            prefs.language ? null : { language: spoken },
+          )
+          .catch((error: unknown) =>
+            app.log.warn({ err: error, chatId }, 'chat language not saved'),
+          );
       }
       const name = html`<b>${watchLabel(result.watch)}</b> (${addressLink(defaultChain, result.watch.address)})`;
       return replyHtml(

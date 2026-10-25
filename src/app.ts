@@ -116,13 +116,28 @@ export const buildApp = async (options: AppOptions) => {
     // Another chat id means the group became a supergroup: the caller reloads its index
     return sent !== null && sent.chatId === chatId;
   };
-  const broadcast = async (message: Html) => {
+  // Each subscribed chat in its own language: the text is built once per language
+  const broadcast = async (format: () => Html) => {
     if (!telegram) {
-      app.log.info({ message: message.value }, 'message broadcast');
+      app.log.info({ message: format().value }, 'message broadcast');
       return;
     }
     try {
-      await app.notifier.notify(MESSAGES_TOPIC, message);
+      const texts = new Map<string, Html>();
+      const textFor = (chatId: number) => {
+        const language = watches.prefs(chatId).language;
+        let text = texts.get(language ?? '');
+        if (!text) {
+          text = withLanguage(language, format);
+          texts.set(language ?? '', text);
+        }
+        return text;
+      };
+      const chats = await app.subscriptions.listByTopic(MESSAGES_TOPIC);
+      // The notifier's queue keeps Telegram's limits; it also drops chats that blocked the bot
+      await Promise.all(
+        chats.map(({ chatId }) => app.notifier.send(chatId, textFor(chatId))),
+      );
     } catch (error) {
       // The message is stored already; a retry of the block would not post it again
       app.log.error({ err: error }, 'message broadcast failed');
