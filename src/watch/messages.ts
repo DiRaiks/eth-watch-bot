@@ -2,6 +2,7 @@ import { html, joinHtml, raw, type Html } from '@dirai/tg-kit';
 import type { Address, Hash, Hex } from 'viem';
 
 import { addressUrl, CHAINS, type ChainName } from '../chains.js';
+import { callAmount, decodeCall, type CallArg } from '../enrich/calldata.js';
 import type { MethodName } from '../enrich/signatures.js';
 import { RISKY_METHODS } from '../enrich/signatures.js';
 import { usdValue } from '../enrich/prices.js';
@@ -12,6 +13,7 @@ import {
   formatTime,
   groupThousands,
   shortAddress,
+  truncate,
   txLink,
 } from '../format.js';
 import type { TokenInfo } from '../scanner/types.js';
@@ -76,16 +78,123 @@ const tokenAmount = (
 const withUsd = (amount: Html, usd: number | undefined) =>
   usd === undefined ? amount : html`${amount} (${formatUsd(usd)})`;
 
-const methodText = (selector: Hex | null, data: Enrichment) => {
+/** Arguments shown per call; the rest is summarised */
+const MAX_ARGS = 4;
+const TIME_PARAMS = /^(deadline|expiration|expiry|sigDeadline)$/;
+
+/** A number short enough for a line: digits grouped, huge ones as a power of ten */
+const shortNumber = (value: bigint) => {
+  const digits = (value < 0n ? -value : value).toString();
+  const sign = value < 0n ? '-' : '';
+  return digits.length > 18
+    ? `${sign}${digits[0]}.${digits.slice(1, 3)}e${digits.length - 1}`
+    : `${sign}${groupThousands(digits)}`;
+};
+
+const isMax = (type: string, value: bigint) => {
+  const bits = Number(type.slice(4) || 256);
+  return (
+    type.startsWith('uint') && bits >= 128 && value === 2n ** BigInt(bits) - 1n
+  );
+};
+
+/** Built-in parameter names that hold token amounts, where the maximum means "all" */
+const AMOUNT_PARAMS = /^(amount|value|amountIn)$/;
+/** Line breaks, bidi overrides and invisible characters could forge the message's layout */
+const INVISIBLE = /[\p{C}\p{Z}]+/gu;
+
+const argValue = (
+  chain: ChainName,
+  arg: CallArg,
+  data: Enrichment,
+  amountOf: Address | null,
+): Html | string => {
+  const { type } = arg;
+  // viem decodes integers of up to 48 bits as numbers
+  const value = typeof arg.value === 'number' ? BigInt(arg.value) : arg.value;
+  if (type.endsWith(']')) {
+    return Array.isArray(value) ? `[${value.length} шт.]` : '[…]';
+  }
+  if (type === 'tuple') {
+    return arg.components ? argList(chain, arg.components, data, null) : '(…)';
+  }
+  if (type === 'address' && typeof value === 'string') {
+    const token = data.tokens.get(value as Address);
+    return token?.symbol
+      ? tokenLink(chain, value as Address, data)
+      : addressLink(chain, value);
+  }
+  if (type === 'bool') return value ? 'да' : 'нет';
+  if (type === 'string' && typeof value === 'string') {
+    return `«${truncate(value.replace(INVISIBLE, ' '), 24)}»`;
+  }
+  if (typeof value === 'bigint') {
+    const token = amountOf && data.tokens.get(amountOf);
+    // No decimals: an NFT, whose approve and transferFrom take a token id
+    if (token && token.decimals === null) return `#${value}`;
+    if (arg.name && TIME_PARAMS.test(arg.name)) {
+      if (value < 2n ** 40n) return formatTime(Number(value) * 1000);
+    } else if (
+      (amountOf || AMOUNT_PARAMS.test(arg.name ?? '')) &&
+      isMax(type, value)
+    ) {
+      return html`<b>все</b>`;
+    }
+    if (token && token.decimals !== null) {
+      return `${formatAmount(value, token.decimals)} ${token.symbol}`.trim();
+    }
+    return shortNumber(value);
+  }
+  if (typeof value === 'string' && value.startsWith('0x')) {
+    return value.length > 18
+      ? `${value.slice(0, 10)}… (${(value.length - 2) / 2} байт)`
+      : value;
+  }
+  return '…';
+};
+
+/** "(to 0x28C6…1d60, amount 250 000 USDC)"; names only from trusted signatures */
+const argList = (
+  chain: ChainName,
+  args: CallArg[],
+  data: Enrichment,
+  amount: { index: number; token: Address } | null,
+): Html => {
+  const shown = args.slice(0, MAX_ARGS).map((arg, index) => {
+    const value = argValue(
+      chain,
+      arg,
+      data,
+      amount?.index === index ? amount.token : null,
+    );
+    return arg.name ? html`${arg.name} ${value}` : html`${value}`;
+  });
+  if (args.length > MAX_ARGS) shown.push(html`…`);
+  return html`(${joinHtml(shown, ', ')})`;
+};
+
+const methodText = (
+  chain: ChainName,
+  selector: Hex | null,
+  input: Hex,
+  contract: Address,
+  data: Enrichment,
+) => {
   if (!selector || selector === '0x') return '';
   const method = data.methods.get(selector);
   if (!method) return html` · метод <code>${selector}</code>`;
+  const args =
+    method.signature &&
+    decodeCall(method.signature, input, { named: method.trusted });
+  const params = args
+    ? argList(chain, args, data, callAmount(selector, contract, args))
+    : '';
   if (!method.trusted) {
     // Anyone can register a name for a selector: show it as a hint only
-    return html` · метод <code>${selector}</code> (похоже на ${method.name})`;
+    return html` · метод <code>${selector}</code> (похоже на ${method.name}${params})`;
   }
   const risky = RISKY_METHODS.has(method.name) ? '⚠️ ' : '';
-  return html` · ${risky}<b>${method.name}</b>`;
+  return html` · ${risky}<b>${method.name}</b>${params}`;
 };
 
 const nftIds = (tokenIds: bigint[], amounts: bigint[] | null) => {
@@ -129,9 +238,9 @@ const describe = (
     case 'receive-native':
       return html`⬇️ Получено ${withUsd(html`<b>${formatAmount(activity.value, 18)} ${native}</b>`, usd)} от ${link(activity.from)}`;
     case 'call':
-      return html`⚙️ Вызов ${link(activity.contract)}${methodText(activity.selector, data)}`;
+      return html`⚙️ Вызов ${link(activity.contract)}${methodText(chain, activity.selector, activity.input, activity.contract, data)}`;
     case 'called':
-      return html`⚙️ Вызов от ${link(activity.caller)}${methodText(activity.selector, data)}`;
+      return html`⚙️ Вызов от ${link(activity.caller)}${methodText(chain, activity.selector, activity.input, activity.address, data)}`;
 
     case 'send-token': {
       const amount = withUsd(

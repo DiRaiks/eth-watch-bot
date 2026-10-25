@@ -17,12 +17,13 @@ describe('signatureLookup', () => {
     expect(await lookup('0x095ea7b3')).toEqual({
       name: 'approve',
       trusted: true,
+      signature: 'approve(address spender,uint256 amount)',
     });
-    expect(await lookup('0xa22cb465')).toEqual({
+    expect(await lookup('0xa22cb465')).toMatchObject({
       name: 'setApprovalForAll',
       trusted: true,
     });
-    expect(await lookup('0x6a761202')).toEqual({
+    expect(await lookup('0x6a761202')).toMatchObject({
       name: 'execTransaction',
       trusted: true,
     });
@@ -55,6 +56,7 @@ describe('signatureLookup', () => {
     expect(await lookup('0x12345678')).toEqual({
       name: 'deposit',
       trusted: false,
+      signature: 'deposit(uint256)',
     });
     await lookup('0x12345678');
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -108,6 +110,13 @@ describe('signatureLookup', () => {
     expect(await answer('safe_Name$1(uint256)')).toEqual({
       name: 'safe_Name$1',
       trusted: false,
+      signature: 'safe_Name$1(uint256)',
+    });
+    // A usable name with odd parameter types: shown, but not decoded with
+    expect(await answer('claim(uint256 <b>)')).toEqual({
+      name: 'claim',
+      trusted: false,
+      signature: null,
     });
   });
 
