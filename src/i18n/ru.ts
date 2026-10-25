@@ -41,6 +41,24 @@ export const ru: Texts = {
     html`Сообщения из транзакций: ${on ? 'включены' : 'выключены'}`,
   statusChains: html`<b>Сети</b>`,
   statsCommand: 'Статистика бота',
+  healthCommand: 'Состояние сервиса',
+  healthTitle: html`🩺 <b>Состояние сервиса</b>`,
+  uptime: (days, hours, minutes) =>
+    days
+      ? `${days} д ${hours} ч`
+      : hours
+        ? `${hours} ч ${minutes} мин`
+        : `${minutes} мин`,
+  healthProcess: (uptime, memoryMb) =>
+    html`Работает: ${uptime} · память ${memoryMb} МБ`,
+  healthDb: (ms) => html`База: ✅ Postgres, ответ за ${ms} мс`,
+  healthDbDown: html`База: 🔴 не отвечает`,
+  healthDbMemory: html`База: ⚪ нет, всё в памяти`,
+  healthTelegram: (ok, mode, queue) =>
+    html`Telegram: ${ok ? '✅' : '🔴'} ${mode}, в очереди ${queue}`,
+  healthSent: (alerts, outgoing, incoming) =>
+    html`Уведомлений с запуска: 🚨 ${alerts} · ⬆️ ${outgoing} · ⬇️ ${incoming}`,
+  healthFound: (count) => html`Сообщений из транзакций с запуска: ${count}`,
   statsTitle: html`<b>Статистика</b>`,
   statsChats: (count) => html`Чатов с адресами: ${count}`,
   statsAddresses: (count) => html`Уникальных адресов: ${count}`,

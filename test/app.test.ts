@@ -496,6 +496,39 @@ describe('status and health', () => {
     expect(t.api.texts().at(-1)).toBe('Эта команда вам недоступна.');
   });
 
+  it('tells the admin how the service is doing with /health', async () => {
+    const t = await start();
+    await send(t, message(`/watch ${ALICE}`));
+    await mine(t, [tx(1, { from: ALICE, to: BOB, value: 10n ** 15n })]);
+
+    await send(t, message('/health', { userId: ADMIN_ID }));
+    const text = t.api.texts().at(-1) ?? '';
+    expect(text).toContain('🩺 <b>Состояние сервиса</b>');
+    expect(text).toMatch(/Работает: \d+ мин · память \d+ МБ/);
+    expect(text).toContain('База: ⚪ нет, всё в памяти');
+    expect(text).toContain('🟢 Ethereum: блок 101');
+    expect(text).toContain('Уведомлений с запуска: 🚨 0 · ⬆️ 1 · ⬇️ 0');
+
+    await send(t, message('/health'));
+    expect(t.api.texts().at(-1)).toBe('Эта команда вам недоступна.');
+  });
+
+  it('checks the database in /health', async () => {
+    let up = true;
+    const stores = {
+      ...memoryStores(),
+      ping: async () => {
+        if (!up) throw new Error('down');
+      },
+    };
+    const t = await start({ stores });
+    await send(t, message('/health', { userId: ADMIN_ID }));
+    expect(t.api.texts().at(-1)).toMatch(/База: ✅ Postgres, ответ за \d+ мс/);
+    up = false;
+    await send(t, message('/health', { userId: ADMIN_ID }));
+    expect(t.api.texts().at(-1)).toContain('База: 🔴 не отвечает');
+  });
+
   it('reports scanner state in /health', async () => {
     const t = await start();
     expect((await t.app.inject({ url: '/health' })).json()).toEqual({
