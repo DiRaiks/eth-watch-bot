@@ -119,10 +119,10 @@ export const formatDigest = (
   return joinHtml([t.digestTitle, ...lines, t.digestNote]);
 };
 
-/** Sends each digest chat its summary once a day, at the chat's local digest hour */
 /** Entries older than this are dropped from a digest: they belong to an earlier day */
 const MAX_AGE_MS = 48 * 3_600_000;
 
+/** Sends each digest chat its summary once a day, at the chat's local digest hour */
 export class DigestService {
   private timer: NodeJS.Timeout | undefined;
   private running: Promise<unknown> | undefined;
