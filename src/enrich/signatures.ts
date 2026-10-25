@@ -22,6 +22,12 @@ const KNOWN_SIGNATURES = [
   // WETH and vaults
   'deposit()',
   'withdraw(uint256 amount)',
+  // Liquid staking: Lido stETH, wstETH and the withdrawal queue
+  'submit(address referral)',
+  'wrap(uint256 amount)',
+  'unwrap(uint256 amount)',
+  'requestWithdrawals(uint256[] amounts,address owner)',
+  'claimWithdrawals(uint256[] requestIds,uint256[] hints)',
   // Routers and wallets
   'multicall(bytes[] calls)',
   'multicall(uint256 deadline,bytes[] calls)',

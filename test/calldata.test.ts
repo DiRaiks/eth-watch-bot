@@ -2,6 +2,7 @@ import {
   encodeFunctionData,
   type AbiFunction,
   maxUint256,
+  parseAbi,
   parseAbiItem,
   type Address,
   type Hex,
@@ -287,5 +288,72 @@ describe('call parameters in messages', () => {
       signature: 'note(string)',
     });
     expect(text).toContain('(похоже на note(«ok ✅ Безопасно txt»))');
+  });
+});
+
+describe('payable calls', () => {
+  const lido = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84' as Address;
+  const referral = '0x11d00000000000000000000000000000000011d0' as Address;
+  const input = encodeFunctionData({
+    abi: parseAbi(['function submit(address)']),
+    args: [referral],
+  });
+  const selector = input.slice(0, 10) as Hex;
+  const base = {
+    hash: txHash(1),
+    order: 0,
+    spam: null,
+    value: 10n ** 15n,
+    selector,
+    input,
+  } as const;
+
+  it('shows the method next to coins sent with it, e.g. staking', async () => {
+    const sent: Activity = {
+      ...base,
+      address: ALICE,
+      importance: 'outgoing',
+      kind: 'send-native',
+      to: lido,
+    };
+    const text = activityLine(
+      'ethereum',
+      sent,
+      data([[selector, await builtIn(selector)]]),
+    ).value;
+    expect(text).toContain('Отправлено <b>0.001 ETH</b>');
+    expect(text).toContain('· <b>submit</b>(referral');
+    expect(text).toContain('0x11d0…11d0');
+  });
+
+  it('shows the method of a payable call of a watched contract', async () => {
+    const received: Activity = {
+      ...base,
+      address: lido,
+      importance: 'incoming',
+      kind: 'receive-native',
+      from: ALICE,
+    };
+    const text = activityLine(
+      'ethereum',
+      received,
+      data([[selector, await builtIn(selector)]]),
+    ).value;
+    expect(text).toContain('Получено <b>0.001 ETH</b>');
+    expect(text).toContain('<b>submit</b>');
+  });
+
+  it('keeps a plain transfer as it was', () => {
+    const plain: Activity = {
+      ...base,
+      selector: null,
+      input: '0x',
+      address: ALICE,
+      importance: 'outgoing',
+      kind: 'send-native',
+      to: BOB,
+    };
+    const text = activityLine('ethereum', plain, data([])).value;
+    expect(text).not.toContain('·');
   });
 });

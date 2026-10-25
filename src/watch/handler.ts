@@ -117,10 +117,19 @@ const tokenOf = (activity: Activity): Address | null => {
   }
 };
 
-const selectorOf = (activity: Activity): Hex | null =>
-  activity.kind === 'call' || activity.kind === 'called'
-    ? activity.selector
-    : null;
+const selectorOf = (activity: Activity): Hex | null => {
+  switch (activity.kind) {
+    case 'call':
+    case 'called':
+      return activity.selector;
+    // Coins sent with a method call, e.g. staking
+    case 'send-native':
+    case 'receive-native':
+      return activity.selector ?? null;
+    default:
+      return null;
+  }
+};
 
 const calledToken = (activity: Activity): Address | null => {
   if (activity.kind === 'call') {
