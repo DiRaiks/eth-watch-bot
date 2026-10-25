@@ -52,7 +52,9 @@ jobs:
 
   deploy:
     needs: image
-    # Skipped until the server is configured (see deploy/README.md)
+    # Skipped until the server is configured (see deploy/README.md). DEPLOY_PATH must be
+    # a repository variable: a job-level `if` is evaluated before the environment is
+    # attached, so a variable of the production environment is never seen here.
     if: vars.DEPLOY_PATH != ''
     runs-on: ubuntu-latest
     environment: production

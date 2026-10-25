@@ -54,7 +54,7 @@ services:
       retries: 3
     logging: *logging
 
-  # Daily gzip dump of the local MongoDB to ./backups, keeps BACKUP_KEEP_DAYS
+  # Daily gzip dump of the MONGO_DB database to ./backups, keeps BACKUP_KEEP_DAYS
   mongo-backup:
     image: mongo:${MONGO_VERSION:-8.0.34}
     profiles: [mongo]
@@ -63,6 +63,8 @@ services:
       - mongo
     environment:
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      # The database of MONGO_URI (mongodb://mongo:27017/<MONGO_DB>)
+      MONGO_DB: ${MONGO_DB:-eth-watch}
     volumes:
       - ./backups:/backup
     entrypoint:
@@ -71,7 +73,7 @@ services:
       - |
         while true; do
           file="/backup/eth-watch-$$(date -u +%Y%m%dT%H%M%SZ).archive.gz"
-          if mongodump --uri=mongodb://mongo:27017/eth-watch --gzip --archive="$$file"; then
+          if mongodump --uri="mongodb://mongo:27017/$$MONGO_DB" --gzip --archive="$$file"; then
             echo "backup written: $$file"
           else
             echo "backup failed" >&2
