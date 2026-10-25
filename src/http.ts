@@ -1,3 +1,4 @@
+import type { MetricsRegistry } from '@dirai/tg-kit';
 import type { FastifyInstance } from 'fastify';
 
 import { txUrl } from './chains.js';
@@ -9,16 +10,36 @@ const MAX_HEALTHY_LAG = 100;
 
 export const registerRoutes = (
   app: FastifyInstance,
-  { scanners, messages }: { scanners: BlockScanner[]; messages: MessageStore },
+  {
+    scanners,
+    messages,
+    metrics,
+    telegram,
+  }: {
+    scanners: BlockScanner[];
+    messages: MessageStore;
+    metrics: MetricsRegistry;
+    /** Whether the bot talks to Telegram (a token is set) */
+    telegram: boolean;
+  },
 ) => {
-  // Always 200 while the process runs: an RPC outage should not restart the container
+  // Always 200 while the process runs: an RPC or Telegram outage should not restart
+  // the container; the status says what is wrong
   app.get('/health', async () => {
     const chains = scanners.map((scanner) => scanner.status());
-    const degraded = chains.some(
-      (chain) => chain.error !== null || (chain.lag ?? 0) > MAX_HEALTHY_LAG,
-    );
-    return { status: degraded ? 'degraded' : 'ok', chains };
+    const bot = telegram ? await app.tgHealth.check() : null;
+    const degraded =
+      chains.some(
+        (chain) => chain.error !== null || (chain.lag ?? 0) > MAX_HEALTHY_LAG,
+      ) ||
+      (bot !== null && !bot.ok);
+    return { status: degraded ? 'degraded' : 'ok', chains, telegram: bot };
   });
+
+  // Not routed by the public proxy (deploy/Caddyfile): scrape it inside the network
+  app.get('/metrics', async (_request, reply) =>
+    reply.type(metrics.contentType).send(await metrics.metrics()),
+  );
 
   app.get<{ Querystring: { limit: number } }>(
     '/v1/messages',

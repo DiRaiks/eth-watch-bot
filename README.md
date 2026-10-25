@@ -38,7 +38,8 @@ The bot speaks Russian; the picture shows its real texts.
 - **Readable messages only.** Text in transaction data is checked for real words; calldata, inscriptions, swap memos and ids are skipped. Each message is posted once, and the same text mailed by one sender to many addresses is posted once with the number of recipients.
 - **Flood guard.** Above five alerts for one chat, or five messages, in a block, the rest comes as a single summary. Token symbols are shown only when they look like tickers, so spam tokens cannot inject text.
 - **English or Russian.** `LANGUAGE=en` (default) or `LANGUAGE=ru` sets the language of messages, buttons and commands, including the command menu.
-- **HTTP API.** `GET /v1/messages` returns recent messages; `GET /health` reports every chain's lag.
+- **HTTP API.** `GET /v1/messages` returns recent messages; `GET /health` reports every chain's lag and the Telegram connection.
+- **Prometheus metrics.** `GET /metrics`: scanner progress and lag per chain, notifications by importance, messages found, Telegram updates and deliveries (from tg-kit), and process metrics. The public proxy does not route it; scrape it inside the network.
 
 ## Commands
 
@@ -66,7 +67,7 @@ flowchart LR
     enrich["enrichment<br/><sub>method names, USD prices</sub>"]
     messages["block-messages<br/><sub>UTF-8 text in tx input</sub>"]
     kit["@dirai/tg-kit<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
-    api["Fastify<br/><sub>/v1/messages, /health</sub>"]
+    api["Fastify<br/><sub>/v1/messages, /health, /metrics</sub>"]
   end
   mongo[("MongoDB<br/><sub>chats, checkpoints, messages, digests</sub>")]
   tg["Telegram"]

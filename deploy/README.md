@@ -59,6 +59,7 @@ gh run watch
 
 - The run reaches "bot is healthy".
 - `docker compose logs bot` shows "scanner starts at the current block" for each chain, then "telegram polling started" (or "telegram webhook set").
+- `$compose exec bot wget -qO- http://127.0.0.1:3000/metrics | grep eth_watch_lag_blocks` shows a small lag per chain. To collect metrics, run Prometheus in the same Docker network; `/metrics` is not public.
 - `/status` in a chat lists every chain in green.
 - With the web profile: `https://<DOMAIN>/health` returns `"status": "ok"`, and `https://<DOMAIN>/` returns 404.
 

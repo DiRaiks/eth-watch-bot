@@ -55,10 +55,13 @@ export const blockMessagesHandler = ({
   chains,
   store,
   broadcast,
+  onFound,
 }: {
   chains: ChainName[];
   store: MessageStore;
   broadcast: (message: Html) => Promise<unknown>;
+  /** Called for every new message, e.g. to count it */
+  onFound?: (chain: ChainName) => void;
 }): BlockHandler => ({
   name: 'block-messages',
   wants: (chain) => chains.includes(chain),
@@ -81,6 +84,7 @@ export const blockMessagesHandler = ({
         timestamp: block.timestamp,
       };
       const fresh = await store.add(message);
+      if (fresh) onFound?.(chain);
       const key = `${tx.from.toLowerCase()}\n${text}`;
       const mailing = mailings.get(key);
       if (mailing) {

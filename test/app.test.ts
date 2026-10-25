@@ -510,7 +510,51 @@ describe('status and health', () => {
           stopped: false,
         },
       ],
+      telegram: {
+        ok: true,
+        mode: 'none',
+        username: 'watch_bot',
+        polling: null,
+        webhook: null,
+        store: 'ok',
+        queue: 0,
+      },
     });
+  });
+
+  it('serves Prometheus metrics of the scanner, notifications and Telegram', async () => {
+    const t = await start();
+    await send(t, message(`/watch ${ALICE}`));
+    t.chain.addBlock(101, [tx(1, { from: ALICE, to: BOB, value: 1n })]);
+    t.chain.setHead(101);
+    await t.scanner.tick();
+
+    const response = await t.app.inject({ url: '/metrics' });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/plain');
+    const text = response.body;
+    expect(text).toContain('eth_watch_head_block{chain="ethereum"} 101');
+    expect(text).toContain('eth_watch_lag_blocks{chain="ethereum"} 0');
+    expect(text).toContain('eth_watch_scanner_up{chain="ethereum"} 1');
+    expect(text).toContain(
+      'eth_watch_notifications_total{chain="ethereum",importance="outgoing"} 1',
+    );
+    expect(text).toContain(
+      'tg_commands_total{command="watch",allowed="true"} 1',
+    );
+    expect(text).toContain('process_cpu_user_seconds_total');
+  });
+
+  it('counts messages found in blocks', async () => {
+    const t = await start();
+    t.chain.addBlock(101, [
+      tx(1, { input: textInput('Hello from the chain') }),
+    ]);
+    t.chain.setHead(101);
+    await t.scanner.tick();
+    expect((await t.app.inject({ url: '/metrics' })).body).toContain(
+      'eth_watch_block_messages_total{chain="ethereum"} 1',
+    );
   });
 
   it('marks RPC problems as degraded', async () => {
