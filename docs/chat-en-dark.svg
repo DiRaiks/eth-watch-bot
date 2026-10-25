@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="828" viewBox="0 0 720 828" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" role="img" aria-label="ETH Watch Bot in a Telegram chat">
-<defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#132030"/><circle cx="18" cy="18" r="1.6" fill="#132030"/></pattern><clipPath id="frame"><rect width="720" height="828" rx="16"/></clipPath></defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="878" viewBox="0 0 720 878" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" role="img" aria-label="ETH Watch Bot in a Telegram chat">
+<defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#132030"/><circle cx="18" cy="18" r="1.6" fill="#132030"/></pattern><clipPath id="frame"><rect width="720" height="878" rx="16"/></clipPath></defs>
 <g clip-path="url(#frame)">
-<rect width="720" height="828" fill="#0e1621"/>
-<rect width="720" height="828" fill="url(#dots)"/>
+<rect width="720" height="878" fill="#0e1621"/>
+<rect width="720" height="878" fill="url(#dots)"/>
 <rect width="720" height="60" fill="#17212b"/>
 <circle cx="40" cy="30" r="20" fill="#3e8ee0"/>
 <text x="40" y="36" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">EW</text>
@@ -15,32 +15,34 @@
 <text x="30" y="161" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">👀 Watching </tspan><tspan fill="#f5f5f5" font-weight="600">Vitalik</tspan><tspan fill="#f5f5f5"> (</tspan><tspan fill="#6ab3f3">0xd8dA…6045</tspan><tspan fill="#f5f5f5">). I will report ETH and token</tspan></text>
 <text x="30" y="184" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">transfers and contract calls.</tspan></text>
 <text x="546" y="191" font-size="12" fill="#7d8b99" text-anchor="end">20:41</text>
-<rect x="16" y="217" width="540" height="136" rx="14" fill="#00000055"/><rect x="16" y="216" width="540" height="136" rx="14" fill="#182533"/>
-<text x="30" y="242" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🔔 </tspan><tspan fill="#f5f5f5" font-weight="600">Vitalik</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
+<rect x="16" y="217" width="540" height="184" rx="14" fill="#00000055"/><rect x="16" y="216" width="540" height="184" rx="14" fill="#182533"/>
+<text x="30" y="242" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🔔 </tspan><tspan fill="#f5f5f5" font-weight="600">Vitalik</tspan><tspan fill="#f5f5f5"> · Ethereum · outgoing</tspan></text>
 <text x="30" y="266" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⚙️ Call to </tspan><tspan fill="#6ab3f3">0xA0b8…eB48</tspan><tspan fill="#f5f5f5"> · </tspan><tspan fill="#f5f5f5" font-weight="600">transfer</tspan><tspan fill="#f5f5f5">(to </tspan><tspan fill="#6ab3f3">0x28C6…1d60</tspan><tspan fill="#f5f5f5">,</tspan></text>
 <text x="30" y="290" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">amount 250,000 USDC)</tspan></text>
-<text x="30" y="314" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⬆️ Sent </tspan><tspan fill="#f5f5f5" font-weight="600">250,000</tspan><tspan fill="#f5f5f5"> </tspan><tspan fill="#6ab3f3">USDC</tspan><tspan fill="#f5f5f5"> ($249,900) → </tspan><tspan fill="#6ab3f3">0x28C6…1d60</tspan></text>
-<text x="30" y="338" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">Transaction</tspan><tspan fill="#f5f5f5"> · block 21,004,117</tspan></text>
-<text x="546" y="343" font-size="12" fill="#7d8b99" text-anchor="end">20:58</text>
-<rect x="16" y="358" width="540" height="40" rx="10" fill="#ffffff" fill-opacity="0.10"/>
-<text x="286" y="383" font-size="15" font-weight="500" fill="#f5f5f5" text-anchor="middle">🔕 Mute for 24 h</text>
-<rect x="16" y="415" width="540" height="184" rx="14" fill="#00000055"/><rect x="16" y="414" width="540" height="184" rx="14" fill="#182533"/>
-<text x="30" y="440" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🚨 </tspan><tspan fill="#f5f5f5" font-weight="600">Vitalik</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
-<text x="30" y="464" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🚨 Approval: </tspan><tspan fill="#6ab3f3">0x9a3D…5768</tspan><tspan fill="#f5f5f5"> can spend </tspan><tspan fill="#f5f5f5" font-weight="600">all</tspan><tspan fill="#f5f5f5"> your </tspan><tspan fill="#6ab3f3">USDC</tspan></text>
-<text x="30" y="488" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⚙️ Call to </tspan><tspan fill="#6ab3f3">0xA0b8…eB48</tspan><tspan fill="#f5f5f5"> · ⚠️ </tspan><tspan fill="#f5f5f5" font-weight="600">approve</tspan><tspan fill="#f5f5f5">(spender </tspan><tspan fill="#6ab3f3">0x9a3D…5768</tspan><tspan fill="#f5f5f5">,</tspan></text>
-<text x="30" y="512" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">amount </tspan><tspan fill="#f5f5f5" font-weight="600">all</tspan><tspan fill="#f5f5f5">)</tspan></text>
-<text x="30" y="538" font-size="15" xml:space="preserve"><tspan fill="#7d8b99" font-style="italic" font-size="14">If this was not you: revoke the approvals (revoke.cash)</tspan></text>
-<text x="30" y="560" font-size="15" xml:space="preserve"><tspan fill="#7d8b99" font-style="italic" font-size="14">and move the funds to a new wallet.</tspan></text>
-<text x="30" y="586" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">Transaction</tspan><tspan fill="#f5f5f5"> · block 21,004,131</tspan></text>
-<text x="546" y="589" font-size="12" fill="#7d8b99" text-anchor="end">21:02</text>
-<rect x="564" y="617" width="140" height="40" rx="14" fill="#00000055"/><rect x="564" y="616" width="140" height="40" rx="14" fill="#2b5278"/>
-<text x="578" y="641" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">/messages on</tspan></text>
-<rect x="16" y="673" width="540" height="138" rx="14" fill="#00000055"/><rect x="16" y="672" width="540" height="138" rx="14" fill="#182533"/>
-<text x="30" y="698" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">✉️ </tspan><tspan fill="#f5f5f5" font-weight="600">Message in block 21,004,120</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
-<rect x="30" y="710" width="512" height="56" rx="6" fill="#1f3346"/>
-<rect x="30" y="710" width="3" height="56" rx="1.5" fill="#6ab3f3"/>
-<text x="44" y="733" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">Happy birthday, Anya! May this line stay</tspan></text>
-<text x="44" y="755" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">on the blockchain forever.</tspan></text>
-<text x="30" y="790" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">0x1f9a…02bc</tspan><tspan fill="#f5f5f5"> → </tspan><tspan fill="#6ab3f3">0xae7a…fE84</tspan><tspan fill="#f5f5f5"> · </tspan><tspan fill="#6ab3f3">Transaction</tspan></text>
-<text x="546" y="801" font-size="12" fill="#7d8b99" text-anchor="end">21:03</text>
+<text x="30" y="314" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⬆️ Sent </tspan><tspan fill="#f5f5f5" font-weight="600">250,000</tspan><tspan fill="#f5f5f5"> </tspan><tspan fill="#6ab3f3">USDC</tspan><tspan fill="#f5f5f5"> ($249,900) → </tspan><tspan fill="#6ab3f3">0x28C6…1d60</tspan><tspan fill="#f5f5f5"> · 🆕 first time</tspan></text>
+<text x="30" y="338" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⛽ Fee 0.00042 ETH ($1.05)</tspan></text>
+<text x="30" y="362" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">💰 Balance: 12.5 ETH ($31,250)</tspan></text>
+<text x="30" y="386" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">Transaction</tspan><tspan fill="#f5f5f5"> · block 21,004,117 · 25 Oct 20:58</tspan></text>
+<text x="546" y="391" font-size="12" fill="#7d8b99" text-anchor="end">20:58</text>
+<rect x="16" y="406" width="540" height="40" rx="10" fill="#ffffff" fill-opacity="0.10"/>
+<text x="286" y="431" font-size="15" font-weight="500" fill="#f5f5f5" text-anchor="middle">🔕 Mute for 24 h</text>
+<rect x="16" y="463" width="540" height="186" rx="14" fill="#00000055"/><rect x="16" y="462" width="540" height="186" rx="14" fill="#182533"/>
+<text x="30" y="488" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🚨 </tspan><tspan fill="#f5f5f5" font-weight="600">Vitalik</tspan><tspan fill="#f5f5f5"> · Ethereum · token approval</tspan></text>
+<rect x="30" y="500" width="470" height="14" rx="7" fill="#7d8b99" fill-opacity="0.35"/>
+<rect x="30" y="524" width="380" height="14" rx="7" fill="#7d8b99" fill-opacity="0.35"/>
+<rect x="30" y="548" width="300" height="14" rx="7" fill="#7d8b99" fill-opacity="0.35"/>
+<text x="30" y="586" font-size="15" xml:space="preserve"><tspan fill="#7d8b99" font-style="italic" font-size="14">If this was not you: revoke the approvals (revoke.cash)</tspan></text>
+<text x="30" y="608" font-size="15" xml:space="preserve"><tspan fill="#7d8b99" font-style="italic" font-size="14">and move the funds to a new wallet.</tspan></text>
+<text x="30" y="634" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🧹 </tspan><tspan fill="#6ab3f3">Review and revoke approvals</tspan><tspan fill="#f5f5f5"> on revoke.cash</tspan></text>
+<text x="546" y="639" font-size="12" fill="#7d8b99" text-anchor="end">21:02</text>
+<rect x="564" y="667" width="140" height="40" rx="14" fill="#00000055"/><rect x="564" y="666" width="140" height="40" rx="14" fill="#2b5278"/>
+<text x="578" y="691" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">/messages on</tspan></text>
+<rect x="16" y="723" width="540" height="138" rx="14" fill="#00000055"/><rect x="16" y="722" width="540" height="138" rx="14" fill="#182533"/>
+<text x="30" y="748" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">✉️ </tspan><tspan fill="#f5f5f5" font-weight="600">Message in block 21,004,120</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
+<rect x="30" y="760" width="512" height="56" rx="6" fill="#1f3346"/>
+<rect x="30" y="760" width="3" height="56" rx="1.5" fill="#6ab3f3"/>
+<text x="44" y="783" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">Happy birthday, Anya! May this line stay</tspan></text>
+<text x="44" y="805" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">on the blockchain forever.</tspan></text>
+<text x="30" y="840" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">0x1f9a…02bc</tspan><tspan fill="#f5f5f5"> → </tspan><tspan fill="#6ab3f3">0xae7a…fE84</tspan><tspan fill="#f5f5f5"> · </tspan><tspan fill="#6ab3f3">Transaction</tspan></text>
+<text x="546" y="851" font-size="12" fill="#7d8b99" text-anchor="end">21:03</text>
 </g></svg>
