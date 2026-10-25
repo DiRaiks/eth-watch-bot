@@ -8,7 +8,7 @@ import {
 } from 'viem';
 
 import { decodeTokenLog, mayConcern, TOKEN_TOPICS } from './token-logs.js';
-import type { ChainReader, TokenInfo } from './types.js';
+import type { ChainReader, TokenInfo, TxReceipt } from './types.js';
 
 const MAX_CACHED_TOKENS = 5000;
 /** Tokens without full metadata (NFTs have no decimals) are asked again after this */
@@ -64,6 +64,24 @@ export const viemReader = (
 
   return {
     getChainId: () => client.getChainId(),
+
+    async getReceipt(hash): Promise<TxReceipt> {
+      const receipt = await client.getTransactionReceipt({ hash });
+      // OP Stack chains (Base, Optimism) also charge for posting the data to L1
+      const { l1Fee } = receipt as { l1Fee?: bigint | null };
+      return {
+        success: receipt.status === 'success',
+        fee: receipt.gasUsed * receipt.effectiveGasPrice + (l1Fee ?? 0n),
+      };
+    },
+
+    getBalance: (address, blockNumber) =>
+      client.getBalance({ address, blockNumber: BigInt(blockNumber) }),
+
+    async isContract(address) {
+      const code = await client.getCode({ address });
+      return code !== undefined && code !== '0x';
+    },
     ...(rpcHost && { rpcHost }),
 
     getBlockNumber: async () =>

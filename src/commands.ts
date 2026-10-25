@@ -16,18 +16,37 @@ const chainLine = (status: ScannerStatus) => {
   return t.chainAt(title, formatBlock(status.lastBlock), status.lag);
 };
 
-/** /messages, /status and the admin /stats */
+const MB = 1024 * 1024;
+
+/** "3 ч 12 мин" */
+const uptimeText = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  return t.uptime(days, hours % 24, minutes % 60);
+};
+
+/** /messages, /status and the admin /stats and /health */
 export const registerCommands = (
   app: FastifyInstance,
   {
     watches,
     scanners,
     messagesEnabled,
+    ping,
+    totals,
   }: {
     watches: WatchService;
     scanners: BlockScanner[];
     /** False when no chain is searched for messages */
     messagesEnabled: boolean;
+    /** Database check; absent when everything is kept in memory */
+    ping?: () => Promise<void>;
+    /** Notifications and block messages since the start */
+    totals: () => {
+      sent: Record<'alert' | 'outgoing' | 'incoming', number>;
+      found: number;
+    };
   },
 ) => {
   const isSubscribed = async (chatId: number) =>
@@ -74,6 +93,46 @@ export const registerCommands = (
           '',
           t.statusChains,
           ...scanners.map((scanner) => chainLine(scanner.status())),
+        ]),
+      );
+    },
+  });
+
+  app.tg.command({
+    command: 'health',
+    description: t.healthCommand,
+    scope: 'admin',
+    handler: async (ctx) => {
+      const started = performance.now();
+      const database = ping
+        ? await ping().then(
+            () => t.healthDb(Math.round(performance.now() - started)),
+            () => t.healthDbDown,
+          )
+        : t.healthDbMemory;
+      const telegram = await app.tgHealth.check();
+      const { sent, found } = totals();
+      return replyHtml(
+        ctx,
+        joinHtml([
+          t.healthTitle,
+          t.healthProcess(
+            uptimeText(process.uptime()),
+            Math.round(process.memoryUsage().rss / MB),
+          ),
+          database,
+          t.healthTelegram(telegram.ok, telegram.mode, telegram.queue),
+          '',
+          t.statusChains,
+          ...scanners.map((scanner) => {
+            const status = scanner.status();
+            return status.rpc
+              ? html`${chainLine(status)} · ${status.rpc}`
+              : chainLine(status);
+          }),
+          '',
+          t.healthSent(sent.alert, sent.outgoing, sent.incoming),
+          messagesEnabled && t.healthFound(found),
         ]),
       );
     },

@@ -22,6 +22,13 @@ export type ScannedBlock = {
 
 export type TokenInfo = { symbol: string; decimals: number | null };
 
+/** What a transaction cost and whether it went through */
+export type TxReceipt = {
+  success: boolean;
+  /** Paid by the sender, in wei: gas, plus the L1 fee on rollups that report it */
+  fee: bigint;
+};
+
 /** What the bot needs from a chain; the viem implementation lives in viem-reader.ts */
 export interface ChainReader {
   getChainId(): Promise<number>;
@@ -46,6 +53,12 @@ export interface ChainReader {
     tokenId?: bigint,
   ): Promise<bigint | null>;
   getTokenInfo(token: Address): Promise<TokenInfo>;
+  /** Outcome and cost of a transaction; optional, alerts go without them */
+  getReceipt?(hash: Hash): Promise<TxReceipt>;
+  /** Native coin balance at a block */
+  getBalance?(address: Address, blockNumber: number): Promise<bigint>;
+  /** Whether the address holds code: a contract rather than a wallet */
+  isContract?(address: Address): Promise<boolean>;
 }
 
 export interface BlockHandler {

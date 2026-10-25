@@ -27,6 +27,8 @@ export const en = {
   /** "25 Oct 14:00 UTC" */
   time: (day: number, month: number, time: string) =>
     `${day} ${MONTHS[month]} ${time} UTC`,
+  localTime: (day: number, month: number, time: string) =>
+    `${day} ${MONTHS[month]} ${time}`,
   transaction: 'Transaction',
 
   // tg-kit and /start
@@ -62,6 +64,25 @@ export const en = {
     html`Messages from transactions: ${on ? 'on' : 'off'}`,
   statusChains: html`<b>Chains</b>`,
   statsCommand: 'Bot statistics',
+  healthCommand: 'Service health',
+  healthTitle: html`🩺 <b>Service health</b>`,
+  uptime: (days: number, hours: number, minutes: number) =>
+    days
+      ? `${days} d ${hours} h`
+      : hours
+        ? `${hours} h ${minutes} min`
+        : `${minutes} min`,
+  healthProcess: (uptime: string, memoryMb: number) =>
+    html`Up for ${uptime} · memory ${memoryMb} MB`,
+  healthDb: (ms: number) => html`Database: ✅ Postgres, answered in ${ms} ms`,
+  healthDbDown: html`Database: 🔴 not answering`,
+  healthDbMemory: html`Database: ⚪ none, all in memory`,
+  healthTelegram: (ok: boolean, mode: string, queue: number) =>
+    html`Telegram: ${ok ? '✅' : '🔴'} ${mode}, ${queue} queued`,
+  healthSent: (alerts: number, outgoing: number, incoming: number) =>
+    html`Notifications since start: 🚨 ${alerts} · ⬆️ ${outgoing} · ⬇️ ${incoming}`,
+  healthFound: (count: number) =>
+    html`Messages from transactions since start: ${count}`,
   statsTitle: html`<b>Statistics</b>`,
   statsChats: (count: number) => html`Chats with addresses: ${count}`,
   statsAddresses: (count: number) => html`Unique addresses: ${count}`,
@@ -149,7 +170,17 @@ export const en = {
   eventAlert: 'needs attention',
   moreInTx: (count: number) => html`…and ${count} more in this transaction`,
   advice: html`<i>If this was not you: revoke the approvals (revoke.cash) and move the funds to a new wallet.</i>`,
-  block: (link: Html, block: string) => html`${link} · block ${block}`,
+  block: (link: Html, block: string, time?: string | null) =>
+    html`${link} · block ${block}${time ? ` · ${time}` : ''}`,
+  eventFailed: ' · ❌ failed',
+  txFailed: html`❌ <b>The transaction failed</b>: no coins or tokens moved, the fee was paid`,
+  fee: (amount: Part) => html`⛽ Fee ${amount}`,
+  balance: (label: string | null, amount: Part) =>
+    html`💰 Balance${label ? html` ${label}` : ''}: ${amount}`,
+  contractNote: ' (contract)',
+  firstTimeNote: ' · 🆕 first time',
+  revoke: (url: string) =>
+    html`🧹 <a href="${url}">Review and revoke approvals</a> on revoke.cash`,
   units: 'units',
   andMore: (count: number) => `and ${count} more`,
 

@@ -9,10 +9,18 @@ import type { Address, Hash } from 'viem';
 import type { ChainName } from './chains.js';
 import type { BlockMessage, MessageStore } from './messages/handler.js';
 import type { CheckpointStore } from './scanner/types.js';
+import {
+  memoryContacts,
+  pgContacts,
+  type ContactStore,
+} from './watch/contacts.js';
 import { memoryDigests, pgDigests, type DigestStore } from './watch/digest.js';
 
 export type Stores = {
+  /** Answers when the database is up; absent for memory stores */
+  ping?: () => Promise<void>;
   chats: SubscriptionStore;
+  contacts: ContactStore;
   checkpoints: CheckpointStore;
   messages: MessageStore;
   digests: DigestStore;
@@ -56,6 +64,7 @@ export const memoryStores = (): Stores => ({
   checkpoints: memoryCheckpoints(),
   messages: memoryMessages(),
   digests: memoryDigests(),
+  contacts: memoryContacts(),
 });
 
 /** The subset of a Postgres client the stores use: a `pg` Pool, or PGlite in tests */
@@ -99,6 +108,7 @@ type MessageRow = {
 export const pgStores = async (sql: Sql): Promise<Stores> => {
   for (const statement of SCHEMA) await sql.query(statement);
   const digests = await pgDigests(sql);
+  const contacts = await pgContacts(sql);
 
   let cleanedAt = 0;
   const cleanup = async () => {
@@ -111,8 +121,12 @@ export const pgStores = async (sql: Sql): Promise<Stores> => {
   };
 
   return {
+    ping: async () => {
+      await sql.query('SELECT 1');
+    },
     chats: pgStore(sql, { table: 'chats' }),
     digests,
+    contacts,
     checkpoints: {
       async get(chain) {
         const { rows } = await sql.query(

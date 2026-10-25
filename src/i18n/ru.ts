@@ -7,6 +7,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const ru: Texts = {
   thousandsSeparator: ' ',
   time: (day, month, time) => `${pad(day)}.${pad(month + 1)} ${time} UTC`,
+  localTime: (day, month, time) => `${pad(day)}.${pad(month + 1)} ${time}`,
   transaction: 'Транзакция',
 
   start: (chains) =>
@@ -40,6 +41,24 @@ export const ru: Texts = {
     html`Сообщения из транзакций: ${on ? 'включены' : 'выключены'}`,
   statusChains: html`<b>Сети</b>`,
   statsCommand: 'Статистика бота',
+  healthCommand: 'Состояние сервиса',
+  healthTitle: html`🩺 <b>Состояние сервиса</b>`,
+  uptime: (days, hours, minutes) =>
+    days
+      ? `${days} д ${hours} ч`
+      : hours
+        ? `${hours} ч ${minutes} мин`
+        : `${minutes} мин`,
+  healthProcess: (uptime, memoryMb) =>
+    html`Работает: ${uptime} · память ${memoryMb} МБ`,
+  healthDb: (ms) => html`База: ✅ Postgres, ответ за ${ms} мс`,
+  healthDbDown: html`База: 🔴 не отвечает`,
+  healthDbMemory: html`База: ⚪ нет, всё в памяти`,
+  healthTelegram: (ok, mode, queue) =>
+    html`Telegram: ${ok ? '✅' : '🔴'} ${mode}, в очереди ${queue}`,
+  healthSent: (alerts, outgoing, incoming) =>
+    html`Уведомлений с запуска: 🚨 ${alerts} · ⬆️ ${outgoing} · ⬇️ ${incoming}`,
+  healthFound: (count) => html`Сообщений из транзакций с запуска: ${count}`,
   statsTitle: html`<b>Статистика</b>`,
   statsChats: (count) => html`Чатов с адресами: ${count}`,
   statsAddresses: (count) => html`Уникальных адресов: ${count}`,
@@ -120,7 +139,17 @@ export const ru: Texts = {
   eventAlert: 'требует внимания',
   moreInTx: (count) => html`…и ещё ${count} в этой транзакции`,
   advice: html`<i>Если это были не вы: отзовите разрешения (revoke.cash) и выведите средства на новый кошелёк.</i>`,
-  block: (link, block) => html`${link} · блок ${block}`,
+  block: (link, block, time) =>
+    html`${link} · блок ${block}${time ? ` · ${time}` : ''}`,
+  eventFailed: ' · ❌ не прошла',
+  txFailed: html`❌ <b>Транзакция не прошла</b>: монеты и токены не переведены, комиссия списана`,
+  fee: (amount) => html`⛽ Комиссия ${amount}`,
+  balance: (label, amount) =>
+    html`💰 Баланс${label ? html` ${label}` : ''}: ${amount}`,
+  contractNote: ' (контракт)',
+  firstTimeNote: ' · 🆕 впервые',
+  revoke: (url) =>
+    html`🧹 <a href="${url}">Проверить и отозвать разрешения</a> на revoke.cash`,
   units: 'ед.',
   andMore: (count) => `и ещё ${count}`,
 

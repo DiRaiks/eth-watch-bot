@@ -43,16 +43,17 @@ Each chat gets English or Russian: the user's Telegram language, or the one chos
 
 ## Commands
 
-| Command                         | Who                       | What                                            |
-| ------------------------------- | ------------------------- | ----------------------------------------------- |
-| `/watch <address\|ens> [label]` | chat admins               | Watch an address, or change its label           |
-| `/unwatch <address\|label>`     | chat admins               | Stop watching                                   |
-| `/list`                         | everyone                  | Watched addresses and their mute state          |
-| `/settings`                     | chat admins               | Chains, threshold, quiet hours, spam, digest    |
-| `/messages on\|off`             | chat admins               | Messages from transaction data                  |
-| `/status`                       | everyone                  | What this chat follows, how each chain is doing |
-| `/stats`                        | bot admins (`BOT_ADMINS`) | Chats, addresses, subscribers, chains           |
-| `/help`                         | everyone                  | Command list                                    |
+| Command                         | Who                       | What                                                                                 |
+| ------------------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
+| `/watch <address\|ens> [label]` | chat admins               | Watch an address, or change its label                                                |
+| `/unwatch <address\|label>`     | chat admins               | Stop watching                                                                        |
+| `/list`                         | everyone                  | Watched addresses and their mute state                                               |
+| `/settings`                     | chat admins               | Chains, threshold, quiet hours, spam, digest                                         |
+| `/messages on\|off`             | chat admins               | Messages from transaction data                                                       |
+| `/status`                       | everyone                  | What this chat follows, how each chain is doing                                      |
+| `/stats`                        | bot admins (`BOT_ADMINS`) | Chats, addresses, subscribers, chains                                                |
+| `/health`                       | bot admins (`BOT_ADMINS`) | Uptime, memory, database, Telegram, chains with their RPC, notifications since start |
+| `/help`                         | everyone                  | Command list                                                                         |
 
 In private chats everyone counts as an admin. In groups and channels it takes a chat admin, both for commands and for the mute buttons.
 
@@ -111,7 +112,7 @@ docker run -d --name eth-watch-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgr
 | `MESSAGES_CHAINS`                                                     | `ethereum`                | Chains searched for text messages; empty (`,`) turns them off                                                                                                                                                                         |
 | `BOT_TOKEN`                                                           |                           | Telegram bot token; without it notifications are logged                                                                                                                                                                               |
 | `BOT_MODE`                                                            | `polling`                 | `polling` or `webhook` (needs `BOT_WEBHOOK_URL`, `BOT_WEBHOOK_SECRET`)                                                                                                                                                                |
-| `BOT_ADMINS`                                                          |                           | Telegram user ids allowed to run `/stats`                                                                                                                                                                                             |
+| `BOT_ADMINS`                                                          |                           | Telegram user ids allowed to run `/stats` and `/health`                                                                                                                                                                               |
 | `DATABASE_URL`                                                        |                           | Postgres connection string; tables are created on start. In memory without it, required in production                                                                                                                                 |
 | `POLL_INTERVAL_MS`, `MAX_BLOCKS_PER_TICK`                             | `4000`, `50`              | Scanner pace and catch-up batch                                                                                                                                                                                                       |
 | `MAX_LAG_BLOCKS`                                                      | `1000`                    | Further behind than this, old blocks are skipped                                                                                                                                                                                      |

@@ -12,6 +12,7 @@ import type {
   ScannedBlock,
   ScannedTransaction,
   TokenInfo,
+  TxReceipt,
 } from '../src/scanner/types.js';
 import { memoryStores, type Stores } from '../src/storage.js';
 
@@ -81,6 +82,11 @@ export const fakeChain = (chainId = 1) => {
   /** Token balances by `${token}:${owner}`; unknown pairs hold 1, null means no answer */
   const balances = new Map<string, bigint | null>();
   const balanceCalls: { token: Address; owner: Address; block: number }[] = [];
+  // Receipts, native balances and contracts answer only when a test sets them
+  const receipts = new Map<Hash, TxReceipt>();
+  const nativeBalances = new Map<string, bigint>();
+  const contracts = new Set<string>();
+  const unknown = () => Promise.reject(new Error('not set in this test'));
 
   const block = (number: number): ScannedBlock =>
     blocks.get(number) ?? {
@@ -105,6 +111,15 @@ export const fakeChain = (chainId = 1) => {
     },
     getTokenInfo: async (token) =>
       tokens.get(token) ?? { symbol: '', decimals: null },
+    getReceipt: (hash) => {
+      const receipt = receipts.get(hash);
+      return receipt ? Promise.resolve(receipt) : unknown();
+    },
+    getBalance: (address) => {
+      const balance = nativeBalances.get(address.toLowerCase());
+      return balance === undefined ? unknown() : Promise.resolve(balance);
+    },
+    isContract: async (address) => contracts.has(address.toLowerCase()),
   };
 
   return {
@@ -113,6 +128,15 @@ export const fakeChain = (chainId = 1) => {
     balanceCalls,
     setBalance(token: Address, owner: Address, balance: bigint | null) {
       balances.set(`${token.toLowerCase()}:${owner.toLowerCase()}`, balance);
+    },
+    setReceipt(hash: Hash, receipt: TxReceipt) {
+      receipts.set(hash, receipt);
+    },
+    setNativeBalance(address: Address, balance: bigint) {
+      nativeBalances.set(address.toLowerCase(), balance);
+    },
+    addContract(address: Address) {
+      contracts.add(address.toLowerCase());
     },
     setHead(number: number) {
       head = number;
