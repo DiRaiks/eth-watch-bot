@@ -62,6 +62,25 @@ export const en = {
     html`Messages from transactions: ${on ? 'on' : 'off'}`,
   statusChains: html`<b>Chains</b>`,
   statsCommand: 'Bot statistics',
+  healthCommand: 'Service health',
+  healthTitle: html`🩺 <b>Service health</b>`,
+  uptime: (days: number, hours: number, minutes: number) =>
+    days
+      ? `${days} d ${hours} h`
+      : hours
+        ? `${hours} h ${minutes} min`
+        : `${minutes} min`,
+  healthProcess: (uptime: string, memoryMb: number) =>
+    html`Up for ${uptime} · memory ${memoryMb} MB`,
+  healthDb: (ms: number) => html`Database: ✅ Postgres, answered in ${ms} ms`,
+  healthDbDown: html`Database: 🔴 not answering`,
+  healthDbMemory: html`Database: ⚪ none, all in memory`,
+  healthTelegram: (ok: boolean, mode: string, queue: number) =>
+    html`Telegram: ${ok ? '✅' : '🔴'} ${mode}, ${queue} queued`,
+  healthSent: (alerts: number, outgoing: number, incoming: number) =>
+    html`Notifications since start: 🚨 ${alerts} · ⬆️ ${outgoing} · ⬇️ ${incoming}`,
+  healthFound: (count: number) =>
+    html`Messages from transactions since start: ${count}`,
   statsTitle: html`<b>Statistics</b>`,
   statsChats: (count: number) => html`Chats with addresses: ${count}`,
   statsAddresses: (count: number) => html`Unique addresses: ${count}`,

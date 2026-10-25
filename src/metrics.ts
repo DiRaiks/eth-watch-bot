@@ -69,10 +69,25 @@ export const createMetrics = (scanners: () => BlockScanner[]) => {
     registers,
   });
 
+  // The same numbers for the admin /health, without parsing the registry
+  const sent: Record<Importance, number> = {
+    alert: 0,
+    outgoing: 0,
+    incoming: 0,
+  };
+  let found = 0;
+
   return {
     registry,
-    notificationSent: (chain: ChainName, importance: Importance) =>
-      alerts.inc({ chain, importance }),
-    messageFound: (chain: ChainName) => messages.inc({ chain }),
+    notificationSent: (chain: ChainName, importance: Importance) => {
+      sent[importance] += 1;
+      alerts.inc({ chain, importance });
+    },
+    messageFound: (chain: ChainName) => {
+      found += 1;
+      messages.inc({ chain });
+    },
+    /** Totals since the process started */
+    totals: () => ({ sent: { ...sent }, found }),
   };
 };

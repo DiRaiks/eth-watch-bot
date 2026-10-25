@@ -204,6 +204,8 @@ export const buildApp = async (options: AppOptions) => {
     watches,
     scanners,
     messagesEnabled: config.messagesChains.length > 0,
+    ...(stores.ping && { ping: stores.ping }),
+    totals: metrics.totals,
   });
   registerRoutes(app, {
     scanners,
