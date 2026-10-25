@@ -235,21 +235,33 @@ const describe = (
     case 'create':
       return t.created;
     case 'send-native':
-      return t.sent(
+      return html`${t.sent(
         withUsd(
           html`<b>${formatAmount(activity.value, 18)} ${native}</b>`,
           usd,
         ),
         link(activity.to),
-      );
+      )}${methodText(
+        chain,
+        activity.selector ?? null,
+        activity.input ?? '0x',
+        activity.to,
+        data,
+      )}`;
     case 'receive-native':
-      return t.received(
+      return html`${t.received(
         withUsd(
           html`<b>${formatAmount(activity.value, 18)} ${native}</b>`,
           usd,
         ),
         link(activity.from),
-      );
+      )}${methodText(
+        chain,
+        activity.selector ?? null,
+        activity.input ?? '0x',
+        activity.address,
+        data,
+      )}`;
     case 'call':
       return t.call(
         link(activity.contract),

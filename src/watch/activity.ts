@@ -32,8 +32,22 @@ type Base = {
 
 export type Activity = Base &
   (
-    | { kind: 'send-native'; to: Address; value: bigint }
-    | { kind: 'receive-native'; from: Address; value: bigint }
+    | {
+        kind: 'send-native';
+        to: Address;
+        value: bigint;
+        /** A payable call, e.g. staking: the method sent with the coins */
+        selector?: Hex | null;
+        input?: Hex;
+      }
+    | {
+        kind: 'receive-native';
+        from: Address;
+        value: bigint;
+        /** A payable call of the watched contract */
+        selector?: Hex | null;
+        input?: Hex;
+      }
     | { kind: 'call'; contract: Address; selector: Hex; input: Hex }
     | { kind: 'called'; caller: Address; selector: Hex | null; input: Hex }
     | { kind: 'create' }
@@ -120,6 +134,8 @@ export const collectActivity = (
           kind: 'send-native',
           to: tx.to,
           value: tx.value,
+          selector,
+          input: tx.input,
         });
       } else {
         activity.push({
@@ -146,6 +162,8 @@ export const collectActivity = (
               kind: 'receive-native',
               from: tx.from,
               value: tx.value,
+              selector,
+              input: tx.input,
             }
           : {
               ...theirs,
