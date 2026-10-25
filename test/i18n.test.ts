@@ -89,6 +89,12 @@ describe('languages', () => {
     const t = await start();
     await t.app.tg.bot.handleUpdate(message(`/watch ${BOB} Bob`));
     expect(t.api.texts().at(-1)).toContain('👀 Watching <b>Bob</b>');
+    // The kit's own /help is in English too, including its own line
+    await t.app.tg.bot.handleUpdate(message('/help'));
+    const help = t.api.texts().at(-1)!;
+    expect(help).toMatch(/^Commands:\n/);
+    expect(help).toContain('/help — List of commands');
+    expect(help).not.toMatch(/[А-Яа-яЁё]/u);
     t.api.clear();
 
     const approve = encodeFunctionData({

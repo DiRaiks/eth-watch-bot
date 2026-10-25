@@ -39,6 +39,8 @@ export const en = {
       'Settings: /settings · All commands: /help',
     ].join('\n'),
   helpTitle: 'Commands:',
+  startCommand: 'Start',
+  helpCommand: 'List of commands',
   forbidden: 'This command is not available to you.',
   adminsOnly: 'Only chat admins can do this.',
 

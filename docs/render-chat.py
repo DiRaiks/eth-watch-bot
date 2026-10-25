@@ -1,4 +1,4 @@
-"""Draws docs/chat-light.svg and docs/chat-dark.svg: the bot in a Telegram chat.
+"""Draws docs/chat-en-light.svg and docs/chat-en-dark.svg: the bot in a Telegram chat.
 
 The texts match what the bot sends with LANGUAGE=en (src/i18n/en.ts). Run: python3 docs/render-chat.py
 """
@@ -140,4 +140,4 @@ def render(p) -> str:
 
 here = Path(__file__).parent
 for name, palette in PALETTES.items():
-    (here / f"chat-{name}.svg").write_text(render(palette), encoding="utf-8")
+    (here / f"chat-en-{name}.svg").write_text(render(palette), encoding="utf-8")
