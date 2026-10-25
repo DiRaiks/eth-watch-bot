@@ -22,7 +22,8 @@ export type Config = {
     webhook?: { url: string; secretToken: string };
     admins: number[];
   };
-  mongoUri?: string;
+  /** Postgres connection string; everything is kept in memory without it */
+  databaseUrl?: string;
   chains: ChainConfig[];
   /** Chains whose transactions are searched for text messages */
   messagesChains: ChainName[];
@@ -93,6 +94,22 @@ const boolean = (env: Env, key: string, fallback: boolean) => {
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
   if (['0', 'false', 'no', 'off'].includes(value)) return false;
   throw new ConfigError(`${key} must be true or false, got "${value}"`);
+};
+
+const databaseUrl = (env: Env) => {
+  const url = text(env, 'DATABASE_URL');
+  // A server still configured for MongoDB must not start quietly with memory only
+  if (!url && text(env, 'MONGO_URI')) {
+    throw new ConfigError(
+      'MONGO_URI is no longer used: the bot stores its data in Postgres, set DATABASE_URL',
+    );
+  }
+  if (url && !/^postgres(ql)?:\/\//.test(url)) {
+    throw new ConfigError(
+      'DATABASE_URL must start with postgres:// or postgresql://',
+    );
+  }
+  return url;
 };
 
 export const loadConfig = (env: Env): Config => {
@@ -183,7 +200,7 @@ export const loadConfig = (env: Env): Config => {
           : undefined,
       admins: list(env, 'BOT_ADMINS').map((id) => chatId(id, 'BOT_ADMINS')),
     },
-    mongoUri: text(env, 'MONGO_URI'),
+    databaseUrl: databaseUrl(env),
     chains,
     messagesChains: messagesChains.filter((name) => enabled.has(name)),
     pollIntervalMs: integer(env, 'POLL_INTERVAL_MS', 4000, { min: 500 }),

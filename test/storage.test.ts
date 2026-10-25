@@ -1,9 +1,8 @@
-import { MongoClient } from 'mongodb';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { BlockMessage } from '../src/messages/handler.js';
-import { memoryMessages, mongoStores, type Stores } from '../src/storage.js';
+import { memoryMessages, pgStores, type Stores } from '../src/storage.js';
 import { ALICE, BOB, txHash } from './helpers.js';
 
 const msg = (n: number, fields: Partial<BlockMessage> = {}): BlockMessage => ({
@@ -17,22 +16,19 @@ const msg = (n: number, fields: Partial<BlockMessage> = {}): BlockMessage => ({
   ...fields,
 });
 
-let server: MongoMemoryServer;
-let client: MongoClient;
+let db: PGlite;
 let stores: Stores;
 
 beforeAll(async () => {
-  server = await MongoMemoryServer.create();
-  client = await MongoClient.connect(server.getUri());
-  stores = await mongoStores(client.db('eth-watch-test'));
-}, 120_000);
-
-afterAll(async () => {
-  await client?.close();
-  await server?.stop();
+  db = await PGlite.create();
+  stores = await pgStores(db);
 });
 
-describe('mongo stores', () => {
+afterAll(async () => {
+  await db?.close();
+});
+
+describe('postgres stores', () => {
   it('saves checkpoints per chain', async () => {
     expect(await stores.checkpoints.get('ethereum')).toBeNull();
     await stores.checkpoints.set('ethereum', 10);
@@ -79,6 +75,42 @@ describe('mongo stores', () => {
     expect(await stores.chats.list()).toEqual([
       { chatId: 7, topics: [], settings: { watches: [{ address: ALICE }] } },
     ]);
+  });
+});
+
+describe('postgres stores, more', () => {
+  it('creates its tables once: a restart keeps the data', async () => {
+    await stores.checkpoints.set('optimism', 42);
+    const again = await pgStores(db);
+    expect(await again.checkpoints.get('optimism')).toBe(42);
+  });
+
+  it('keeps the last 1000 digest entries of a chat, in order', async () => {
+    const entry = (n: number) => ({
+      address: ALICE,
+      chain: 'ethereum' as const,
+      hash: txHash(n),
+      at: n,
+    });
+    for (let n = 1; n <= 1003; n += 1) await stores.digests.add(9, entry(n));
+    const taken = await stores.digests.take(9);
+    expect(taken).toHaveLength(1000);
+    expect(taken[0]).toEqual(entry(4));
+    expect(taken.at(-1)).toEqual(entry(1003));
+  });
+
+  it('deletes messages older than 90 days', async () => {
+    await stores.messages.add(msg(500));
+    await db.query(
+      `UPDATE messages SET created_at = now() - interval '91 days' WHERE hash = $1`,
+      [txHash(500)],
+    );
+    // A fresh store cleans up on its first save
+    const fresh = await pgStores(db);
+    await fresh.messages.add(msg(501));
+    const hashes = (await fresh.messages.recent(1000)).map((m) => m.hash);
+    expect(hashes).toContain(txHash(501));
+    expect(hashes).not.toContain(txHash(500));
   });
 });
 

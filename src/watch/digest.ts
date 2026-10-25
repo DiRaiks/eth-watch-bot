@@ -1,6 +1,5 @@
 import { html, joinHtml, type Html } from '@dirai/tg-kit';
 import type { FastifyBaseLogger } from 'fastify';
-import type { Collection } from 'mongodb';
 import type { Address, Hash } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
@@ -55,41 +54,65 @@ export const memoryDigests = (): DigestStore => {
   };
 };
 
-type DigestDocument = {
-  chatId: number;
-  entries: DigestEntry[];
-  sentDay?: string;
+/** The subset of a Postgres client the store uses: a `pg` Pool, or PGlite in tests */
+type Sql = {
+  query(text: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
 };
 
-export const mongoDigests = (
-  collection: Collection<DigestDocument>,
-): DigestStore => ({
-  async add(chatId, entry) {
-    await collection.updateOne(
-      { chatId },
-      { $push: { entries: { $each: [entry], $slice: -MAX_ENTRIES } } },
-      { upsert: true },
-    );
-  },
-  async take(chatId) {
-    const before = await collection.findOneAndUpdate(
-      { chatId },
-      { $set: { entries: [] } },
-      { returnDocument: 'before' },
-    );
-    return before?.entries ?? [];
-  },
-  async lastSent(chatId) {
-    return (await collection.findOne({ chatId }))?.sentDay ?? null;
-  },
-  async markSent(chatId, day) {
-    await collection.updateOne(
-      { chatId },
-      { $set: { sentDay: day } },
-      { upsert: true },
-    );
-  },
-});
+export const pgDigests = async (sql: Sql): Promise<DigestStore> => {
+  await sql.query(`CREATE TABLE IF NOT EXISTS digests (
+    chat_id bigint PRIMARY KEY,
+    entries jsonb NOT NULL DEFAULT '[]',
+    sent_day text
+  )`);
+  return {
+    async add(chatId, entry) {
+      // Appends, keeping the last MAX_ENTRIES in order
+      await sql.query(
+        `INSERT INTO digests (chat_id, entries) VALUES ($1, jsonb_build_array($2::jsonb))
+         ON CONFLICT (chat_id) DO UPDATE SET entries = (
+           SELECT COALESCE(jsonb_agg(e ORDER BY i), '[]'::jsonb) FROM (
+             SELECT e, i
+             FROM jsonb_array_elements(digests.entries || jsonb_build_array($2::jsonb))
+               WITH ORDINALITY AS a(e, i)
+             ORDER BY i DESC LIMIT $3
+           ) AS kept
+         )`,
+        [chatId, JSON.stringify(entry), MAX_ENTRIES],
+      );
+    },
+    async take(chatId) {
+      // One statement: an entry added meanwhile is either taken or kept, never lost
+      const { rows } = await sql.query(
+        `WITH taken AS (
+           SELECT entries FROM digests WHERE chat_id = $1 FOR UPDATE
+         )
+         UPDATE digests SET entries = '[]' FROM taken
+         WHERE digests.chat_id = $1
+         RETURNING taken.entries`,
+        [chatId],
+      );
+      return ((rows[0] as { entries?: DigestEntry[] } | undefined)?.entries ??
+        []) as DigestEntry[];
+    },
+    async lastSent(chatId) {
+      const { rows } = await sql.query(
+        'SELECT sent_day FROM digests WHERE chat_id = $1',
+        [chatId],
+      );
+      return (
+        (rows[0] as { sent_day: string | null } | undefined)?.sent_day ?? null
+      );
+    },
+    async markSent(chatId, day) {
+      await sql.query(
+        `INSERT INTO digests (chat_id, sent_day) VALUES ($1, $2)
+         ON CONFLICT (chat_id) DO UPDATE SET sent_day = $2`,
+        [chatId, day],
+      );
+    },
+  };
+};
 
 /** The summary text: per address, how many incoming transactions and roughly how much */
 export const formatDigest = (

@@ -69,15 +69,15 @@ flowchart LR
     kit["@dirai/tg-kit<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
     api["Fastify<br/><sub>/v1/messages, /health, /metrics</sub>"]
   end
-  mongo[("MongoDB<br/><sub>chats, checkpoints, messages, digests</sub>")]
+  db[("Postgres<br/><sub>chats, checkpoints, messages, digests</sub>")]
   tg["Telegram"]
 
   rpc --> scanner --> watch & messages
   watch --- enrich
   watch & messages --> kit --> tg
-  scanner --- mongo
-  kit --- mongo
-  messages --- mongo
+  scanner --- db
+  kit --- db
+  messages --- db
   messages --> api
 ```
 
@@ -95,10 +95,10 @@ npm install
 npm run dev
 ```
 
-Without `BOT_TOKEN` notifications go to the log, and without `MONGO_URI` everything lives in memory, so a public RPC is enough to try it. A local MongoDB:
+Without `BOT_TOKEN` notifications go to the log, and without `DATABASE_URL` everything lives in memory, so a public RPC is enough to try it. A local Postgres:
 
 ```bash
-docker run -d --name eth-watch-mongo -p 27017:27017 mongo:8
+docker run -d --name eth-watch-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=eth_watch postgres:18-alpine
 ```
 
 ## Configuration
@@ -112,7 +112,7 @@ docker run -d --name eth-watch-mongo -p 27017:27017 mongo:8
 | `BOT_TOKEN`                                                           |                           | Telegram bot token; without it notifications are logged                                                                                                                                                                               |
 | `BOT_MODE`                                                            | `polling`                 | `polling` or `webhook` (needs `BOT_WEBHOOK_URL`, `BOT_WEBHOOK_SECRET`)                                                                                                                                                                |
 | `BOT_ADMINS`                                                          |                           | Telegram user ids allowed to run `/stats`                                                                                                                                                                                             |
-| `MONGO_URI`                                                           |                           | MongoDB (Atlas or self-hosted); in memory without it, required in production                                                                                                                                                          |
+| `DATABASE_URL`                                                        |                           | Postgres connection string; tables are created on start. In memory without it, required in production                                                                                                                                 |
 | `POLL_INTERVAL_MS`, `MAX_BLOCKS_PER_TICK`                             | `4000`, `50`              | Scanner pace and catch-up batch                                                                                                                                                                                                       |
 | `MAX_LAG_BLOCKS`                                                      | `1000`                    | Further behind than this, old blocks are skipped                                                                                                                                                                                      |
 | `LANGUAGE`                                                            | `en`                      | Language of the bot: `en` or `ru`                                                                                                                                                                                                     |
@@ -152,12 +152,12 @@ curl 'http://localhost:3000/v1/messages?limit=5'
 
 ## Deploy
 
-One VPS with Docker Compose: the bot, plus optional Caddy for HTTPS (webhook and public API) and an optional local MongoDB with daily backups. After CI passes on `main`, the image is built and pushed to GHCR; the deploy step stays skipped until the server is configured. See [deploy/README.md](deploy/README.md).
+One VPS with Docker Compose: the bot, plus optional Caddy for HTTPS (webhook and public API) and an optional local Postgres with daily backups. After CI passes on `main`, the image is built and pushed to GHCR; the deploy step stays skipped until the server is configured. See [deploy/README.md](deploy/README.md).
 
 ## Development
 
 ```bash
-npm test               # unit and integration tests, MongoDB in memory
+npm test               # unit and integration tests, Postgres in memory (PGlite)
 npm run test:coverage
 npm run lint && npm run format && npm run types
 ```

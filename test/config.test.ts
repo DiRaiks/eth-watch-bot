@@ -98,7 +98,7 @@ describe('loadConfig', () => {
       DEFAULT_CHANNEL_ID: '-100123',
       DEFAULT_ADDRESSES: '0xabc,0xdef',
       DEFAULT_CHANNEL_MESSAGES: 'yes',
-      MONGO_URI: 'mongodb://localhost/eth',
+      DATABASE_URL: 'postgres://bot:pw@localhost:5432/eth',
     });
     expect(config.bot).toEqual({
       token: 'token',
@@ -116,13 +116,15 @@ describe('loadConfig', () => {
       addresses: ['0xabc', '0xdef'],
       messages: true,
     });
-    expect(config.mongoUri).toBe('mongodb://localhost/eth');
+    expect(config.databaseUrl).toBe('postgres://bot:pw@localhost:5432/eth');
   });
 
   it.each([
     [{}, /at least one chain/],
     [{ ...base, MESSAGES_CHAINS: 'solana' }, /unknown chain "solana"/],
     [{ ...base, BOT_MODE: 'push' }, /BOT_MODE/],
+    [{ ...base, MONGO_URI: 'mongodb://x/eth' }, /MONGO_URI is no longer used/],
+    [{ ...base, DATABASE_URL: 'mysql://x/eth' }, /DATABASE_URL must start/],
     [{ ...base, BOT_TOKEN: 't', BOT_MODE: 'webhook' }, /BOT_WEBHOOK_URL/],
     [{ ...base, PORT: 'abc' }, /PORT must be an integer/],
     [

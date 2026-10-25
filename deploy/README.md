@@ -2,11 +2,11 @@
 
 One VPS runs the bot with Docker Compose:
 
-| Service                 | Image                           | Role                                                                                           |
-| ----------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `bot`                   | `ghcr.io/<owner>/eth-watch-bot` | The bot and its HTTP API, plain HTTP inside the network, runs as `node`                        |
-| `caddy`                 | `caddy:2.11.7-alpine`           | Optional (`COMPOSE_PROFILES=web`): TLS for `DOMAIN`, proxies `/telegram/*`, `/v1/*`, `/health` |
-| `mongo`, `mongo-backup` | `mongo:8.0`                     | Optional (`COMPOSE_PROFILES=mongo`): local MongoDB with daily gzip dumps to `./backups`        |
+| Service                       | Image                           | Role                                                                                           |
+| ----------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `bot`                         | `ghcr.io/<owner>/eth-watch-bot` | The bot and its HTTP API, plain HTTP inside the network, runs as `node`                        |
+| `caddy`                       | `caddy:2.11.7-alpine`           | Optional (`COMPOSE_PROFILES=web`): TLS for `DOMAIN`, proxies `/telegram/*`, `/v1/*`, `/health` |
+| `postgres`, `postgres-backup` | `postgres:18.6-alpine`          | Optional (`COMPOSE_PROFILES=postgres`): local Postgres with daily `pg_dump` to `./backups`     |
 
 A polling bot needs neither Caddy nor an open port. Add the `web` profile for webhook mode or to publish `GET /v1/messages`.
 
@@ -16,7 +16,7 @@ After CI passes on `main`, the deploy workflow builds the image, tags it with th
 
 ### 1. Server
 
-A Linux VPS with 1 vCPU and 1 GB RAM is enough (2 GB with local MongoDB), and Docker Engine with the compose plugin.
+A Linux VPS with 1 vCPU and 1 GB RAM is enough, also with the local Postgres, and Docker Engine with the compose plugin. Postgres runs on any x86-64 CPU; MongoDB 5+ needed AVX, which many VPS CPUs do not expose.
 
 ```bash
 sudo usermod -aG docker <deploy-user>
@@ -25,7 +25,7 @@ sudo mkdir -p /opt/eth-watch-bot && sudo chown <deploy-user> /opt/eth-watch-bot
 sudo ufw allow 80,443/tcp
 ```
 
-Create `/opt/eth-watch-bot/.env` from [`.env.example`](.env.example): at least one `RPC_URL_*`, `BOT_TOKEN` and `MONGO_URI`. `PORT` is ignored there: compose runs the bot on 3000. With the `mongo` profile, `MONGO_DB` (default `eth-watch`) must name the database in `MONGO_URI`, or the backups dump the wrong one. For the `web` profile add `DOMAIN` (an A record pointing to the server) and `TRUST_PROXY=1`; for webhook mode `BOT_MODE=webhook`, `BOT_WEBHOOK_URL=https://<DOMAIN>` and `BOT_WEBHOOK_SECRET` (`openssl rand -hex 32`).
+Create `/opt/eth-watch-bot/.env` from [`.env.example`](.env.example): at least one `RPC_URL_*`, `BOT_TOKEN` and `DATABASE_URL`. `PORT` is ignored there: compose runs the bot on 3000. For the local database set `COMPOSE_PROFILES=postgres`, `POSTGRES_PASSWORD` (`openssl rand -hex 24`) and `DATABASE_URL=postgres://eth_watch:<POSTGRES_PASSWORD>@postgres:5432/eth_watch`; the bot creates its tables on start. For the `web` profile add `DOMAIN` (an A record pointing to the server) and `TRUST_PROXY=1`; for webhook mode `BOT_MODE=webhook`, `BOT_WEBHOOK_URL=https://<DOMAIN>` and `BOT_WEBHOOK_SECRET` (`openssl rand -hex 32`).
 
 Make sure the old bots are stopped: two processes polling one token steal each other's updates.
 
@@ -75,16 +75,18 @@ $compose logs -f bot
 
 **Rollback:** set `IMAGE_TAG=<sha of an earlier commit>` in `images.env`, then `$compose up -d`.
 
-**Restore a backup** (local MongoDB profile):
-
-```bash
-$compose exec -T mongo mongorestore --gzip --archive --drop < backups/eth-watch-<timestamp>.archive.gz
-```
-
-**Rescan from a block:** stop the bot, set the checkpoint, start it again (use your `MONGO_DB` in place of `eth-watch` if you changed it). Notifications for those blocks are sent again; messages are not, they are stored once.
+**Restore a backup** (local Postgres profile):
 
 ```bash
 $compose stop bot
-$compose exec mongo mongosh eth-watch --eval 'db.checkpoints.updateOne({chain: "ethereum"}, {$set: {block: 21000000}})'
+$compose exec -T postgres pg_restore -U eth_watch -d eth_watch --clean --if-exists < backups/eth-watch-<timestamp>.dump
+$compose start bot
+```
+
+**Rescan from a block:** stop the bot, set the checkpoint, start it again. Notifications for those blocks are sent again; messages are not, they are stored once.
+
+```bash
+$compose stop bot
+$compose exec postgres psql -U eth_watch -d eth_watch -c "UPDATE checkpoints SET block = 21000000 WHERE chain = 'ethereum'"
 $compose start bot
 ```
