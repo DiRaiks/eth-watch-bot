@@ -6,18 +6,20 @@ import { callAmount, decodeCall, type CallArg } from '../enrich/calldata.js';
 import type { MethodName } from '../enrich/signatures.js';
 import { RISKY_METHODS } from '../enrich/signatures.js';
 import { t } from '../i18n/index.js';
+import { knownName } from '../known.js';
 import { usdValue } from '../enrich/prices.js';
 import {
   addressLink,
   formatAmount,
   formatBlock,
+  formatLocalTime,
   formatTime,
   groupThousands,
   shortAddress,
   truncate,
   txLink,
 } from '../format.js';
-import type { TokenInfo } from '../scanner/types.js';
+import type { TokenInfo, TxReceipt } from '../scanner/types.js';
 import type { Activity, Importance } from './activity.js';
 import type { Watch } from './watch-service.js';
 
@@ -27,6 +29,14 @@ export type Enrichment = {
   methods: Map<Hex, MethodName | null>;
   /** USD price per token; the native coin under null */
   prices: Map<Address | null, number>;
+  /** Outcome and fee of transactions, when the RPC answered */
+  receipts?: Map<Hash, TxReceipt>;
+  /** Native balance of watched addresses after the block */
+  balances?: Map<Address, bigint>;
+  /** Counterparties known to be contracts (true) or wallets (false) */
+  contracts?: Map<Address, boolean>;
+  /** `owner:counterparty` pairs, lowercase, seen for the first time */
+  newContacts?: Set<string>;
 };
 
 export const watchLabel = (watch: Watch) =>
@@ -228,7 +238,21 @@ const describe = (
   data: Enrichment,
 ): Html => {
   const native = CHAINS[chain].nativeSymbol;
-  const link = (address: Address) => addressLink(chain, address);
+  const link = (address: Address) => {
+    const name = knownName(chain, address);
+    return name
+      ? html`<a href="${addressUrl(chain, address)}">${name}</a>`
+      : addressLink(chain, address);
+  };
+  // Someone the address pays or lets spend: a contract, and first dealings, are worth a note
+  const party = (address: Address) => {
+    const isNew = data.newContacts?.has(
+      `${activity.address.toLowerCase()}:${address.toLowerCase()}`,
+    );
+    const contract =
+      data.contracts?.get(address) === true && !knownName(chain, address);
+    return html`${link(address)}${contract ? t.contractNote : ''}${isNew ? t.firstTimeNote : ''}`;
+  };
   const usd = activityUsd(activity, data);
 
   switch (activity.kind) {
@@ -240,7 +264,7 @@ const describe = (
           html`<b>${formatAmount(activity.value, 18)} ${native}</b>`,
           usd,
         ),
-        link(activity.to),
+        party(activity.to),
       )}${methodText(
         chain,
         activity.selector ?? null,
@@ -296,7 +320,7 @@ const describe = (
       if (activity.sentBy) {
         return t.taken(amount, link(activity.to), link(activity.sentBy));
       }
-      return t.sent(amount, link(activity.to));
+      return t.sent(amount, party(activity.to));
     }
     case 'receive-token': {
       const amount = withUsd(
@@ -316,7 +340,7 @@ const describe = (
       const what = html`NFT ${tokenLink(chain, activity.token, data)} ${nftIds(activity.tokenIds, activity.amounts)}`;
       return activity.sentBy
         ? t.nftTaken(what, link(activity.to), link(activity.sentBy))
-        : t.nftSent(what, link(activity.to));
+        : t.nftSent(what, party(activity.to));
     }
     case 'receive-nft':
       return t.nftReceived(
@@ -333,17 +357,17 @@ const describe = (
         ? t.viaPermit2(formatTime(activity.permit2.expiration * 1000))
         : '';
       return activity.unlimited
-        ? t.approvalAll(via, link(activity.spender), token)
+        ? t.approvalAll(via, party(activity.spender), token)
         : t.approvalAmount(
             via,
-            link(activity.spender),
+            party(activity.spender),
             tokenAmount(chain, activity.token, activity.value, data),
           );
     }
     case 'nft-approval':
       return activity.importance === 'alert'
         ? t.nftApproval(
-            link(activity.spender),
+            party(activity.spender),
             tokenLink(chain, activity.token, data),
             activity.tokenId,
           )
@@ -354,7 +378,7 @@ const describe = (
     case 'approval-for-all':
       return activity.approved
         ? t.approvalForAll(
-            link(activity.operator),
+            party(activity.operator),
             tokenLink(chain, activity.token, data),
           )
         : t.approvalForAllRevoked(
@@ -377,6 +401,14 @@ const MAX_LINES = 12;
 const MAX_LENGTH = 3500;
 
 const RANK = { alert: 0, outgoing: 1, incoming: 2 } as const;
+
+/** Activity of a transaction the watched address sent: it paid the fee */
+const paysFee = (item: Activity) =>
+  item.kind === 'send-native' || item.kind === 'call' || item.kind === 'create';
+
+/** Approvals of the address on the chain, with a button to revoke them */
+const revokeUrl = (chain: ChainName, owner: Address) =>
+  `https://revoke.cash/address/${owner}?chainId=${CHAINS[chain].viem.id}`;
 
 /** What happened, in a word or two: the only part an alert shows before its spoiler */
 const eventName = (top: Activity | undefined, importance: Importance) => {
@@ -403,7 +435,17 @@ export const formatTx = (
   group: TxGroup,
   data: Enrichment,
   label: (address: Address) => string,
-  { hideDetails = false }: { hideDetails?: boolean } = {},
+  {
+    hideDetails = false,
+    timeZone,
+    blockTime,
+  }: {
+    hideDetails?: boolean;
+    /** The chat's zone for the block time */
+    timeZone?: string;
+    /** Unix seconds */
+    blockTime?: number;
+  } = {},
 ) => {
   const several = group.watches.length > 1;
   const title = group.watches.map(watchLabel).join(', ');
@@ -415,19 +457,54 @@ export const formatTx = (
     const line = activityLine(chain, item, data);
     return several ? html`<b>${label(item.address)}</b>: ${line}` : line;
   });
+  const receipt = data.receipts?.get(group.hash);
+  const failed = receipt?.success === false;
   // Nothing sensitive here: the chat list shows it as the message preview
-  const header = html`${icon} <b>${title}</b> · ${CHAINS[chain].title} · ${eventName(items[0], group.importance)}`;
+  const header = html`${icon} <b>${title}</b> · ${CHAINS[chain].title} · ${eventName(items[0], group.importance)}${failed ? t.eventFailed : ''}`;
+
+  // The sender pays the fee, even for a failed transaction
+  const native = CHAINS[chain].nativeSymbol;
+  const nativePrice = data.prices.get(null);
+  const amount = (wei: bigint) =>
+    withUsd(
+      html`${formatAmount(wei, 18)} ${native}`,
+      nativePrice === undefined ? undefined : usdValue(wei, 18, nativePrice),
+    );
+  const paidFee =
+    receipt && items.some(paysFee) ? t.fee(amount(receipt.fee)) : null;
+  const balances = group.watches.flatMap((watch) => {
+    const balance = data.balances?.get(watch.address);
+    return balance === undefined
+      ? []
+      : [t.balance(several ? watchLabel(watch) : null, amount(balance))];
+  });
+  const approvals = items.some(
+    (item) =>
+      item.importance === 'alert' &&
+      (item.kind === 'approval' ||
+        item.kind === 'nft-approval' ||
+        item.kind === 'approval-for-all'),
+  );
+  const owner = group.watches[0]?.address;
+  const time =
+    blockTime !== undefined && timeZone
+      ? formatLocalTime(blockTime * 1000, timeZone)
+      : null;
 
   const build = (shown: number) => {
     const details = joinHtml([
       ...lines.slice(0, shown),
       shown < lines.length && t.moreInTx(lines.length - shown),
-      t.block(txLink(chain, group.hash), formatBlock(blockNumber)),
+      failed && t.txFailed,
+      paidFee,
+      ...balances,
+      t.block(txLink(chain, group.hash), formatBlock(blockNumber), time),
     ]);
     return joinHtml([
       header,
       hideDetails ? html`<tg-spoiler>${details}</tg-spoiler>` : details,
       group.importance === 'alert' && t.advice,
+      approvals && owner && t.revoke(revokeUrl(chain, owner)),
     ]);
   };
 

@@ -27,6 +27,8 @@ export const en = {
   /** "25 Oct 14:00 UTC" */
   time: (day: number, month: number, time: string) =>
     `${day} ${MONTHS[month]} ${time} UTC`,
+  localTime: (day: number, month: number, time: string) =>
+    `${day} ${MONTHS[month]} ${time}`,
   transaction: 'Transaction',
 
   // tg-kit and /start
@@ -148,7 +150,17 @@ export const en = {
   eventAlert: 'needs attention',
   moreInTx: (count: number) => html`…and ${count} more in this transaction`,
   advice: html`<i>If this was not you: revoke the approvals (revoke.cash) and move the funds to a new wallet.</i>`,
-  block: (link: Html, block: string) => html`${link} · block ${block}`,
+  block: (link: Html, block: string, time?: string | null) =>
+    html`${link} · block ${block}${time ? ` · ${time}` : ''}`,
+  eventFailed: ' · ❌ failed',
+  txFailed: html`❌ <b>The transaction failed</b>: no coins or tokens moved, the fee was paid`,
+  fee: (amount: Part) => html`⛽ Fee ${amount}`,
+  balance: (label: string | null, amount: Part) =>
+    html`💰 Balance${label ? html` ${label}` : ''}: ${amount}`,
+  contractNote: ' (contract)',
+  firstTimeNote: ' · 🆕 first time',
+  revoke: (url: string) =>
+    html`🧹 <a href="${url}">Review and revoke approvals</a> on revoke.cash`,
   units: 'units',
   andMore: (count: number) => `and ${count} more`,
 

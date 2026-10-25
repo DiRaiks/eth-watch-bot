@@ -54,6 +54,27 @@ export const formatTime = (ms: number) => {
   );
 };
 
+/** "26.10 02:16" in the chat's zone, for when a block was made */
+export const formatLocalTime = (ms: number, timeZone: string) => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      day: 'numeric',
+      month: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(ms)
+      .map((part) => [part.type, part.value]),
+  );
+  return t.localTime(
+    Number(parts.day),
+    Number(parts.month) - 1,
+    `${parts.hour}:${parts.minute}`,
+  );
+};
+
 /** Cuts by code points, so emoji and other surrogate pairs stay whole */
 export const truncate = (text: string, max: number) => {
   const chars = Array.from(text);

@@ -1,7 +1,7 @@
 import type { Html, SendOptions } from '@dirai/tg-kit';
 import type { FastifyBaseLogger } from 'fastify';
 import { InlineKeyboard } from 'grammy';
-import type { Address, Hex } from 'viem';
+import type { Address, Hash, Hex } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
 import { callToken } from '../enrich/calldata.js';
@@ -9,13 +9,19 @@ import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
 import { t } from '../i18n/index.js';
-import type { BlockHandler, ChainReader, TokenInfo } from '../scanner/types.js';
+import type {
+  BlockHandler,
+  ChainReader,
+  TokenInfo,
+  TxReceipt,
+} from '../scanner/types.js';
 import {
   collectActivity,
   mostImportant,
   type Activity,
   type Importance,
 } from './activity.js';
+import type { ContactStore } from './contacts.js';
 import type { DigestService } from './digest.js';
 import {
   activityUsd,
@@ -45,6 +51,11 @@ const MAX_TOKENS = 30;
 const MAX_SELECTORS = 20;
 const MAX_VERIFIED = 20;
 const ENRICH_DEADLINE_MS = 1500;
+/** Receipts, balances and code of what is about to be reported */
+const MAX_RECEIPTS = 20;
+const MAX_BALANCES = 10;
+const MAX_COUNTERPARTIES = 20;
+const FACTS_DEADLINE_MS = 3000;
 const VERIFY_DEADLINE_MS = 3000;
 
 export { watchLabel };
@@ -180,6 +191,124 @@ const holdsToken = async (
   }
 };
 
+/** Activity that comes from the transaction itself, so its receipt tells its outcome */
+const ownTx = (item: Activity) =>
+  item.kind === 'send-native' ||
+  item.kind === 'receive-native' ||
+  item.kind === 'call' ||
+  item.kind === 'called' ||
+  item.kind === 'create';
+
+/** The sender pays the fee: activity of a transaction the watched address sent */
+const sentByWatched = (item: Activity) =>
+  item.kind === 'send-native' || item.kind === 'call' || item.kind === 'create';
+
+/** Who the watched address paid or allowed to spend, in its own transaction */
+const counterpartyOf = (item: Activity): Address | null => {
+  switch (item.kind) {
+    case 'send-native':
+      return item.to;
+    case 'send-token':
+    case 'send-nft':
+      return item.sentBy || item.spam ? null : item.to;
+    case 'approval':
+    case 'nft-approval':
+      return item.importance === 'alert' ? item.spender : null;
+    case 'approval-for-all':
+      return item.approved ? item.operator : null;
+    default:
+      return null;
+  }
+};
+
+/**
+ * What the transactions about to be reported did: whether they went through and their
+ * fee, balances after the block, which counterparties are contracts and which are new.
+ * Each part is best effort: a slow or missing answer only leaves its line out.
+ */
+const gatherFacts = async (
+  items: Activity[],
+  reader: ChainReader,
+  blockNumber: number,
+  contacts: ContactStore | undefined,
+): Promise<
+  Pick<Enrichment, 'receipts' | 'balances' | 'contracts' | 'newContacts'>
+> => {
+  const unique = <T>(values: T[], limit: number) =>
+    [...new Set(values)].slice(0, limit);
+  const hashes = unique(
+    items.filter(ownTx).map((item) => item.hash),
+    MAX_RECEIPTS,
+  );
+  const holders = unique(
+    items
+      .filter((item) => sentByWatched(item) || item.kind === 'receive-native')
+      .map((item) => item.address),
+    MAX_BALANCES,
+  );
+  const pairs = items
+    .map((item) => [item.address, counterpartyOf(item)] as const)
+    .filter((pair): pair is readonly [Address, Address] => pair[1] !== null)
+    .slice(0, MAX_COUNTERPARTIES);
+  const counterparties = unique(
+    pairs.map(([, counterparty]) => counterparty),
+    MAX_COUNTERPARTIES,
+  );
+
+  const settle = <T>(promise: Promise<T> | undefined) =>
+    promise
+      ? withDeadline(
+          promise.then((value): T | null => value),
+          FACTS_DEADLINE_MS,
+          null,
+        )
+      : Promise.resolve(null);
+
+  const [receipts, balances, contracts, newContacts] = await Promise.all([
+    Promise.all(
+      hashes.map(
+        async (hash) =>
+          [hash, await settle(reader.getReceipt?.(hash))] as const,
+      ),
+    ),
+    Promise.all(
+      holders.map(
+        async (address) =>
+          [
+            address,
+            await settle(reader.getBalance?.(address, blockNumber)),
+          ] as const,
+      ),
+    ),
+    Promise.all(
+      counterparties.map(
+        async (address) =>
+          [address, await settle(reader.isContract?.(address))] as const,
+      ),
+    ),
+    Promise.all(
+      pairs.map(async ([owner, counterparty]) =>
+        (await settle(contacts?.remember(owner, counterparty)))
+          ? `${owner.toLowerCase()}:${counterparty.toLowerCase()}`
+          : null,
+      ),
+    ),
+  ]);
+
+  const known = <K, V>(entries: (readonly [K, V | null])[]) =>
+    new Map(
+      entries.flatMap(([key, value]) =>
+        value === null ? [] : [[key, value] as [K, V]],
+      ),
+    );
+  return {
+    receipts: known<Hash, TxReceipt>(receipts),
+    balances: known<Address, bigint>(balances),
+    contracts: known<Address, boolean>(contracts),
+    newContacts: new Set(newContacts.filter((pair) => pair !== null)),
+  };
+};
+
 const positive = (balance: bigint | null) =>
   balance === null ? null : balance > 0n;
 
@@ -212,7 +341,9 @@ const enrich = async (
   const priced = [
     ...new Set(
       byImportance.flatMap((item): (Address | null)[] =>
-        item.kind === 'send-native' || item.kind === 'receive-native'
+        item.kind === 'send-native' ||
+        item.kind === 'receive-native' ||
+        sentByWatched(item)
           ? [null]
           : item.kind === 'send-token' || item.kind === 'receive-token'
             ? [item.token]
@@ -268,6 +399,7 @@ export const addressWatchHandler = ({
   methods,
   prices,
   digest,
+  contacts,
   log,
   onSent,
   now = Date.now,
@@ -278,6 +410,8 @@ export const addressWatchHandler = ({
   /** Null turns USD amounts off */
   prices: PriceLookup | null;
   digest?: DigestService;
+  /** Who each address dealt with, to point out new counterparties */
+  contacts?: ContactStore;
   log?: FastifyBaseLogger;
   /** Called for every transaction message sent to a chat, e.g. to count it */
   onSent?: (chain: ChainName, importance: Importance) => void;
@@ -361,6 +495,18 @@ export const addressWatchHandler = ({
       }
     }
 
+    const reported = [
+      ...new Set(
+        [...groups.values()].flatMap((chatGroups) =>
+          [...chatGroups.values()].flatMap((group) => group.items),
+        ),
+      ),
+    ];
+    Object.assign(
+      data,
+      await gatherFacts(reported, reader, block.number, contacts),
+    );
+
     let undelivered = false;
     const send = async (
       chatId: number,
@@ -423,6 +569,8 @@ export const addressWatchHandler = ({
       const message = (group: TxGroup) =>
         formatTx(chain, block.number, group, data, label, {
           hideDetails: prefs.details === 'hidden',
+          timeZone: prefs.timeZone,
+          blockTime: block.timestamp,
         });
       const options = (group: TxGroup, silent: boolean) => ({
         replyMarkup: muteKeyboard(group.watches),
