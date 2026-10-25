@@ -19,6 +19,11 @@ export type ChatPrefs = {
   mode: 'each' | 'digest';
   /** Local hour of the daily digest */
   digestHour: number;
+  /**
+   * `hidden`: amounts, addresses and links of an alert go under a spoiler, so the chat
+   * list and a glance at the screen show only which address did what
+   */
+  details: 'hidden' | 'shown';
 };
 
 export const DEFAULT_PREFS: ChatPrefs = {
@@ -29,6 +34,7 @@ export const DEFAULT_PREFS: ChatPrefs = {
   spam: 'show',
   mode: 'each',
   digestHour: 9,
+  details: 'hidden',
 };
 
 export const THRESHOLDS = [0, 10, 100, 1000] as const;
@@ -94,6 +100,7 @@ export const readPrefs = (settings: Record<string, unknown>): ChatPrefs => {
     spam: raw.spam === 'hide' ? 'hide' : 'show',
     mode: raw.mode === 'digest' ? 'digest' : 'each',
     digestHour: hour(raw.digestHour, DEFAULT_PREFS.digestHour),
+    details: raw.details === 'shown' ? 'shown' : DEFAULT_PREFS.details,
   };
 };
 

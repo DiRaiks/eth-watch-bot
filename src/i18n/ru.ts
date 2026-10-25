@@ -83,6 +83,8 @@ export const ru: Texts = {
     html`Спам: ${hide ? 'скрывать' : 'показывать с пометкой'}`,
   settingsMode: (digestAt) =>
     html`Режим: ${digestAt ? `входящие — сводкой в ${digestAt}` : 'каждая транзакция'}`,
+  settingsDetails: (hidden) =>
+    html`Детали: ${hidden ? 'под спойлером, в списке чатов видно только событие' : 'открыты'}`,
   settingsNote: html`<i>Исходящие переводы, разрешения на токены и списания не вами приходят всегда, со звуком и без порога.</i>`,
   fromUsd: (usd) => `от $${usd}`,
   allIncoming: 'Все входящие',
@@ -91,6 +93,8 @@ export const ru: Texts = {
   spamHidden: 'Скрывать спам',
   everyTransaction: 'Каждая транзакция',
   digestAt: (time) => `Сводка в ${time}`,
+  detailsHidden: 'Детали под спойлером',
+  detailsShown: 'Детали открыты',
 
   digestTitle: html`📋 <b>Сводка за сутки</b>`,
   digestEmpty: 'Входящих транзакций не было.',
@@ -108,6 +112,11 @@ export const ru: Texts = {
     html`🚨 …и ещё ${count} тревог в блоке ${block} (${chain}). Проверьте адреса в эксплорере.`,
   moreTransactions: (count, block, chain) =>
     html`…и ещё ${count} транзакций в блоке ${block} (${chain})`,
+  eventOutgoing: 'исходящая',
+  eventIncoming: 'входящая',
+  eventApproval: 'разрешение на токены',
+  eventTaken: 'списание не вами',
+  eventAlert: 'требует внимания',
   moreInTx: (count) => html`…и ещё ${count} в этой транзакции`,
   advice: html`<i>Если это были не вы: отзовите разрешения (revoke.cash) и выведите средства на новый кошелёк.</i>`,
   block: (link, block) => html`${link} · блок ${block}`,
