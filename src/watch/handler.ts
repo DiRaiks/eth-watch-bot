@@ -203,7 +203,14 @@ const ownTx = (item: Activity) =>
 const sentByWatched = (item: Activity) =>
   item.kind === 'send-native' || item.kind === 'call' || item.kind === 'create';
 
-/** Who the watched address paid or allowed to spend, in its own transaction */
+/** A counterparty met in a transaction; remembered once the alert is delivered */
+export type ContactPair = { hash: Hash; owner: Address; counterparty: Address };
+
+/**
+ * Who the watched address paid or allowed to spend. Only in a transaction it sent
+ * itself: anyone can emit an Approval or Transfer naming the address, and a forged one
+ * must not make a look-alike "known".
+ */
 const counterpartyOf = (item: Activity): Address | null => {
   switch (item.kind) {
     case 'send-native':
@@ -232,7 +239,9 @@ const gatherFacts = async (
   blockNumber: number,
   contacts: ContactStore | undefined,
 ): Promise<
-  Pick<Enrichment, 'receipts' | 'balances' | 'contracts' | 'newContacts'>
+  Pick<Enrichment, 'receipts' | 'balances' | 'contracts' | 'newContacts'> & {
+    contactPairs: ContactPair[];
+  }
 > => {
   const unique = <T>(values: T[], limit: number) =>
     [...new Set(values)].slice(0, limit);
@@ -246,12 +255,22 @@ const gatherFacts = async (
       .map((item) => item.address),
     MAX_BALANCES,
   );
-  const pairs = items
-    .map((item) => [item.address, counterpartyOf(item)] as const)
-    .filter((pair): pair is readonly [Address, Address] => pair[1] !== null)
+  const sentBy = new Set(
+    items
+      .filter(sentByWatched)
+      .map((item) => `${item.hash}:${item.address.toLowerCase()}`),
+  );
+  const pairs: ContactPair[] = items
+    .filter((item) => sentBy.has(`${item.hash}:${item.address.toLowerCase()}`))
+    .flatMap((item) => {
+      const counterparty = counterpartyOf(item);
+      return counterparty
+        ? [{ hash: item.hash, owner: item.address, counterparty }]
+        : [];
+    })
     .slice(0, MAX_COUNTERPARTIES);
   const counterparties = unique(
-    pairs.map(([, counterparty]) => counterparty),
+    pairs.map(({ counterparty }) => counterparty),
     MAX_COUNTERPARTIES,
   );
 
@@ -287,8 +306,9 @@ const gatherFacts = async (
       ),
     ),
     Promise.all(
-      pairs.map(async ([owner, counterparty]) =>
-        (await settle(contacts?.remember(owner, counterparty)))
+      pairs.map(async ({ owner, counterparty }) =>
+        // Unknown when the store did not answer: then no note rather than a wrong one
+        (await settle(contacts?.isKnown(owner, counterparty))) === false
           ? `${owner.toLowerCase()}:${counterparty.toLowerCase()}`
           : null,
       ),
@@ -306,6 +326,7 @@ const gatherFacts = async (
     balances: known<Address, bigint>(balances),
     contracts: known<Address, boolean>(contracts),
     newContacts: new Set(newContacts.filter((pair) => pair !== null)),
+    contactPairs: pairs,
   };
 };
 
@@ -495,17 +516,47 @@ export const addressWatchHandler = ({
       }
     }
 
+    // What goes out as a message now; incoming activity of digest chats waits for the
+    // summary and needs no receipts or balances
+    const toDigest = (chatId: number, group: TxGroup) =>
+      Boolean(digest) &&
+      group.importance === 'incoming' &&
+      watches.prefs(chatId).mode === 'digest';
     const reported = [
       ...new Set(
-        [...groups.values()].flatMap((chatGroups) =>
-          [...chatGroups.values()].flatMap((group) => group.items),
+        [...groups].flatMap(([chatId, chatGroups]) =>
+          [...chatGroups.values()]
+            .filter((group) => !toDigest(chatId, group))
+            .flatMap((group) => group.items),
         ),
       ),
     ];
-    Object.assign(
-      data,
-      await gatherFacts(reported, reader, block.number, contacts),
+    const { contactPairs, ...facts } = await gatherFacts(
+      reported,
+      reader,
+      block.number,
+      contacts,
     );
+    Object.assign(data, facts);
+
+    // Counterparties become known once an alert about them reached a chat, so a failed
+    // delivery and the retried block still say "first time"
+    const remembered = new Set<string>();
+    const rememberContacts = async (hash: Hash) => {
+      if (data.receipts?.get(hash)?.success === false) return;
+      for (const { owner, counterparty } of contactPairs.filter(
+        (pair) => pair.hash === hash,
+      )) {
+        const pair = `${owner}:${counterparty}`;
+        if (remembered.has(pair)) continue;
+        remembered.add(pair);
+        await contacts
+          ?.remember(owner, counterparty)
+          .catch((error: unknown) =>
+            log?.warn({ err: error }, 'contact not saved'),
+          );
+      }
+    };
 
     let undelivered = false;
     const send = async (
@@ -515,6 +566,7 @@ export const addressWatchHandler = ({
     ) => {
       const ok = await deliver(chatId, message, options);
       undelivered ||= !ok;
+      return ok;
     };
 
     for (const [chatId, chatGroups] of groups) {
@@ -581,7 +633,9 @@ export const addressWatchHandler = ({
 
         // Every alert rings, whatever the settings; the limit only stops forged floods
         for (const group of alerts.slice(0, MAX_ALERTS_PER_BLOCK)) {
-          await send(chatId, message(group), options(group, false));
+          if (await send(chatId, message(group), options(group, false))) {
+            await rememberContacts(group.hash);
+          }
           onSent?.(chain, group.importance);
         }
         if (alerts.length > MAX_ALERTS_PER_BLOCK) {
@@ -597,7 +651,9 @@ export const addressWatchHandler = ({
         }
 
         for (const group of others.slice(0, MAX_MESSAGES_PER_BLOCK)) {
-          await send(chatId, message(group), options(group, quiet));
+          if (await send(chatId, message(group), options(group, quiet))) {
+            await rememberContacts(group.hash);
+          }
           onSent?.(chain, group.importance);
         }
         if (others.length > MAX_MESSAGES_PER_BLOCK) {

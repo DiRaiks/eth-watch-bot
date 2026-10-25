@@ -6,10 +6,12 @@ import {
   ALICE,
   BOB,
   buildTestApp,
+  callback,
   CAROL,
   message,
   tx,
   txHash,
+  USDC,
 } from './helpers.js';
 
 type TestApp = Awaited<ReturnType<typeof buildTestApp>>;
@@ -85,6 +87,57 @@ describe('what the alert tells about the transaction', () => {
       tx(3, { from: ALICE, to: BOB, value: 10n ** 15n }),
     ]);
     expect(again).not.toContain('впервые');
+  });
+
+  it('does not let a forged approval make a look-alike known', async () => {
+    const t = await start();
+    // Someone else's transaction emits an Approval naming the watched address
+    t.chain.addBlock(
+      101,
+      [tx(1, { from: BOB, to: USDC })],
+      [
+        {
+          type: 'approval',
+          token: USDC,
+          owner: ALICE,
+          spender: CAROL,
+          value: 10n ** 30n,
+          transactionHash: txHash(1),
+        },
+      ],
+    );
+    t.chain.setHead(101);
+    await t.scanner.tick();
+
+    const paid = await mine(t, [
+      tx(2, { from: ALICE, to: CAROL, value: 10n ** 15n }),
+    ]);
+    expect(paid).toContain('🆕 впервые');
+  });
+
+  it('keeps a counterparty new until an alert about it is delivered', async () => {
+    const t = await start();
+    t.chain.setReceipt(txHash(1), { success: false, fee: 1n });
+    await mine(t, [tx(1, { from: ALICE, to: BOB, value: 10n ** 15n })]);
+    // A failed transaction moved nothing: BOB stays new
+    const again = await mine(t, [
+      tx(2, { from: ALICE, to: BOB, value: 10n ** 15n }),
+    ]);
+    expect(again).toContain('🆕 впервые');
+  });
+
+  it('asks the RPC nothing for incoming activity that waits for the digest', async () => {
+    const t = await start();
+    const asked: string[] = [];
+    const reader = t.chain.reader;
+    const getReceipt = reader.getReceipt!.bind(reader);
+    reader.getReceipt = (hash) => {
+      asked.push(hash);
+      return getReceipt(hash);
+    };
+    await t.app.tg.bot.handleUpdate(callback('set:mode:digest', []));
+    await mine(t, [tx(1, { from: BOB, to: ALICE, value: 10n ** 15n })]);
+    expect(asked).toEqual([]);
   });
 
   it('leaves the lines out when the RPC does not answer', async () => {

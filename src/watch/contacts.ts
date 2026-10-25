@@ -7,6 +7,8 @@ import type { Address } from 'viem';
  * the bot started watching; history before that is not read.
  */
 export interface ContactStore {
+  /** Whether the owner dealt with the counterparty before; reads only */
+  isKnown(owner: Address, counterparty: Address): Promise<boolean>;
   /** Records the pair; true when the owner had not dealt with the counterparty before */
   remember(owner: Address, counterparty: Address): Promise<boolean>;
 }
@@ -20,6 +22,7 @@ const MEMORY_CONTACTS = 10_000;
 export const memoryContacts = (): ContactStore => {
   const seen = new Set<string>();
   return {
+    isKnown: async (owner, counterparty) => seen.has(key(owner, counterparty)),
     async remember(owner, counterparty) {
       const pair = key(owner, counterparty);
       if (seen.has(pair)) return false;
@@ -40,6 +43,13 @@ export const pgContacts = async (sql: PgClientLike): Promise<ContactStore> => {
     PRIMARY KEY (owner, counterparty)
   )`);
   return {
+    async isKnown(owner, counterparty) {
+      const { rows } = await sql.query(
+        'SELECT 1 FROM contacts WHERE owner = $1 AND counterparty = $2',
+        [owner.toLowerCase(), counterparty.toLowerCase()],
+      );
+      return rows.length > 0;
+    },
     async remember(owner, counterparty) {
       const { rows } = await sql.query(
         `INSERT INTO contacts (owner, counterparty) VALUES ($1, $2)
