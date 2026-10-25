@@ -1,21 +1,12 @@
 {
+  "extends": "fastify-tsconfig",
   "compilerOptions": {
-    "module": "commonjs",
+    "outDir": "dist",
     "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2017",
+    "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "removeComments": false,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src", "test"]
 }

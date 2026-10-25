@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env
+.env.*
+.git
+.github
+.husky
+test
+deploy
+*.md
+docs

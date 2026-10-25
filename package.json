@@ -1,72 +1,60 @@
 {
-  "name": "eth_monitoring",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "name": "eth-watch-bot",
+  "version": "2.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "description": "Telegram bot that watches EVM addresses and relays text messages sent in transaction data",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.10",
+    "npm": ">=11.21"
+  },
   "scripts": {
-    "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "types": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier . --check",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky"
   },
   "dependencies": {
-    "@nestjs/common": "^9.0.0",
-    "@nestjs/config": "^2.3.1",
-    "@nestjs/core": "^9.0.0",
-    "@nestjs/platform-express": "^9.0.0",
-    "ethers": "^6.8.0",
-    "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.2.0",
-    "telegraf": "^3.34.1"
+    "@dirai/tg-kit": "^1.0.0",
+    "@fastify/cors": "^11.3.1",
+    "@fastify/rate-limit": "^11.2.1",
+    "fastify": "^5.12.7",
+    "grammy": "^1.46.0",
+    "mongodb": "^7.7.0",
+    "viem": "^2.57.11"
   },
   "devDependencies": {
-    "@nestjs/cli": "^9.0.0",
-    "@nestjs/schematics": "^9.0.0",
-    "@nestjs/testing": "^9.0.0",
-    "@types/express": "^4.17.13",
-    "@types/jest": "29.2.4",
-    "@types/node": "18.11.18",
-    "@types/supertest": "^2.0.11",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0",
-    "eslint": "^8.0.1",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "jest": "29.3.1",
-    "prettier": "^2.3.2",
-    "source-map-support": "^0.5.20",
-    "supertest": "^6.1.3",
-    "ts-jest": "29.0.3",
-    "ts-loader": "^9.2.3",
-    "ts-node": "^10.0.0",
-    "tsconfig-paths": "4.1.1",
-    "typescript": "^4.7.4"
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "fastify-tsconfig": "^3.0.0",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "mongodb-memory-server": "^11.3.0",
+    "pino-pretty": "^13.2.0",
+    "prettier": "^3.9.10",
+    "rimraf": "^6.1.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts}": [
+      "eslint --max-warnings 0 --fix",
+      "prettier --write"
     ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "*.{json,md,yml,yaml}": "prettier --write"
   }
 }

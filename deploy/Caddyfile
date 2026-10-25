@@ -1,0 +1,18 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	@public path /telegram/* /v1/* /health
+	handle @public {
+		reverse_proxy bot:3000
+	}
+
+	handle {
+		respond 404
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}

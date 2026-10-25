@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="604" viewBox="0 0 720 604" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" role="img" aria-label="ETH Watch Bot in a Telegram chat">
+<defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#132030"/><circle cx="18" cy="18" r="1.6" fill="#132030"/></pattern><clipPath id="frame"><rect width="720" height="604" rx="16"/></clipPath></defs>
+<g clip-path="url(#frame)">
+<rect width="720" height="604" fill="#0e1621"/>
+<rect width="720" height="604" fill="url(#dots)"/>
+<rect width="720" height="60" fill="#17212b"/>
+<circle cx="40" cy="30" r="20" fill="#3e8ee0"/>
+<text x="40" y="36" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">EW</text>
+<text x="72" y="26" font-size="16" font-weight="600" fill="#f5f5f5">ETH Watch Bot</text>
+<text x="72" y="45" font-size="13" fill="#7d8b99">бот</text>
+<rect x="434" y="81" width="270" height="40" rx="14" fill="#00000055"/><rect x="434" y="80" width="270" height="40" rx="14" fill="#2b5278"/>
+<text x="448" y="105" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">/watch vitalik.eth Виталик</tspan></text>
+<text x="694" y="113" font-size="12" fill="#7d8b99" text-anchor="end">20:41</text>
+<rect x="16" y="137" width="540" height="64" rx="14" fill="#00000055"/><rect x="16" y="136" width="540" height="64" rx="14" fill="#182533"/>
+<text x="30" y="161" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">👀 Слежу за </tspan><tspan fill="#f5f5f5" font-weight="600">Виталик</tspan><tspan fill="#f5f5f5"> (</tspan><tspan fill="#6ab3f3">0xd8dA…6045</tspan><tspan fill="#f5f5f5">). Сообщу о переводах ETH</tspan></text>
+<text x="30" y="184" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">и токенов и о вызовах контрактов.</tspan></text>
+<text x="546" y="191" font-size="12" fill="#7d8b99" text-anchor="end">20:41</text>
+<rect x="16" y="217" width="540" height="112" rx="14" fill="#00000055"/><rect x="16" y="216" width="540" height="112" rx="14" fill="#182533"/>
+<text x="30" y="242" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">🔔 </tspan><tspan fill="#f5f5f5" font-weight="600">Виталик</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
+<text x="30" y="266" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⚙️ Вызов контракта </tspan><tspan fill="#6ab3f3">0xA0b8…eB48</tspan><tspan fill="#f5f5f5"> · метод </tspan><tspan fill="#ff8a80" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">0xa9059cbb</tspan></text>
+<text x="30" y="290" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">⬆️ Отправлено </tspan><tspan fill="#f5f5f5" font-weight="600">250 000</tspan><tspan fill="#f5f5f5"> </tspan><tspan fill="#6ab3f3">USDC</tspan><tspan fill="#f5f5f5"> → </tspan><tspan fill="#6ab3f3">0x28C6…1d60</tspan></text>
+<text x="30" y="314" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">Транзакция</tspan><tspan fill="#f5f5f5"> · блок 21 004 117</tspan></text>
+<text x="546" y="319" font-size="12" fill="#7d8b99" text-anchor="end">20:58</text>
+<rect x="16" y="334" width="540" height="40" rx="10" fill="#ffffff" fill-opacity="0.10"/>
+<text x="286" y="359" font-size="15" font-weight="500" fill="#f5f5f5" text-anchor="middle">🔕 Заглушить на 24 ч</text>
+<rect x="564" y="393" width="140" height="40" rx="14" fill="#00000055"/><rect x="564" y="392" width="140" height="40" rx="14" fill="#2b5278"/>
+<text x="578" y="417" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">/messages on</tspan></text>
+<rect x="16" y="449" width="540" height="138" rx="14" fill="#00000055"/><rect x="16" y="448" width="540" height="138" rx="14" fill="#182533"/>
+<text x="30" y="474" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">✉️ </tspan><tspan fill="#f5f5f5" font-weight="600">Сообщение в блоке 21 004 120</tspan><tspan fill="#f5f5f5"> · Ethereum</tspan></text>
+<rect x="30" y="486" width="512" height="56" rx="6" fill="#1f3346"/>
+<rect x="30" y="486" width="3" height="56" rx="1.5" fill="#6ab3f3"/>
+<text x="44" y="509" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">С днём рождения, Аня! Пусть эта строчка</tspan></text>
+<text x="44" y="531" font-size="15" xml:space="preserve"><tspan fill="#f5f5f5">останется в блокчейне навсегда.</tspan></text>
+<text x="30" y="566" font-size="15" xml:space="preserve"><tspan fill="#6ab3f3">0x1f9a…02bc</tspan><tspan fill="#f5f5f5"> → </tspan><tspan fill="#6ab3f3">0xae7a…fE84</tspan><tspan fill="#f5f5f5"> · </tspan><tspan fill="#6ab3f3">Транзакция</tspan></text>
+<text x="546" y="577" font-size="12" fill="#7d8b99" text-anchor="end">21:03</text>
+</g></svg>

@@ -1,0 +1,63 @@
+import { html, type Html } from '@dirai/tg-kit';
+import type { Context } from 'grammy';
+import { formatUnits } from 'viem';
+
+import { addressUrl, txUrl, type ChainName } from './chains.js';
+
+export const shortAddress = (address: string) =>
+  `${address.slice(0, 6)}…${address.slice(-4)}`;
+
+const groupThousands = (integer: string) =>
+  integer.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+/**
+ * Human amount: up to 4 decimals for amounts of 1 and more, 4 significant digits for
+ * smaller ones, thousands separated by spaces
+ */
+export const formatAmount = (value: bigint, decimals: number) => {
+  const [integer = '0', fraction = ''] = formatUnits(value, decimals).split(
+    '.',
+  );
+  let shown: string;
+  if (integer !== '0') {
+    shown = fraction.slice(0, 4);
+  } else {
+    const leadingZeros = fraction.match(/^0*/)?.[0].length ?? 0;
+    shown = fraction.slice(0, leadingZeros + 4);
+  }
+  shown = shown.replace(/0+$/, '');
+  return shown
+    ? `${groupThousands(integer)}.${shown}`
+    : groupThousands(integer);
+};
+
+export const addressLink = (chain: ChainName, address: string): Html =>
+  html`<a href="${addressUrl(chain, address)}">${shortAddress(address)}</a>`;
+
+export const txLink = (
+  chain: ChainName,
+  hash: string,
+  label = 'Транзакция',
+): Html => html`<a href="${txUrl(chain, hash)}">${label}</a>`;
+
+export const formatBlock = (number: number) => groupThousands(String(number));
+
+/** "25.10 14:00 UTC" */
+export const formatTime = (ms: number) => {
+  const date = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`;
+};
+
+/** Cuts by code points, so emoji and other surrogate pairs stay whole */
+export const truncate = (text: string, max: number) => {
+  const chars = Array.from(text);
+  return chars.length > max ? `${chars.slice(0, max - 1).join('')}…` : text;
+};
+
+/** Replies with HTML markup and without link previews */
+export const replyHtml = (ctx: Context, message: Html) =>
+  ctx.reply(message.value, {
+    parse_mode: 'HTML',
+    link_preview_options: { is_disabled: true },
+  });
