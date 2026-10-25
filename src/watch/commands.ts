@@ -6,7 +6,7 @@ import type { Address } from 'viem';
 
 import { addressLink, formatTime, replyHtml, truncate } from '../format.js';
 import type { ChainName } from '../chains.js';
-import { t } from '../i18n/index.js';
+import { languageOf, t } from '../i18n/index.js';
 import { MUTE_HOURS, watchLabel } from './handler.js';
 import { normalizeAddress, type WatchService } from './watch-service.js';
 
@@ -92,6 +92,14 @@ export const registerWatchCommands = (
       );
       if (result.status === 'limit') {
         return replyHtml(ctx, t.watchLimit);
+      }
+      // Alerts come without a user to read the language from: keep the one replies use
+      const chatId = ctx.chat!.id;
+      const spoken = languageOf(ctx.from?.language_code);
+      if (spoken && !watches.prefs(chatId).language) {
+        await watches.setPrefs(chatId, (prefs) =>
+          prefs.language ? null : { language: spoken },
+        );
       }
       const name = html`<b>${watchLabel(result.watch)}</b> (${addressLink(defaultChain, result.watch.address)})`;
       return replyHtml(

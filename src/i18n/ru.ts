@@ -93,6 +93,7 @@ export const ru: Texts = {
   spamHidden: 'Скрывать спам',
   everyTransaction: 'Каждая транзакция',
   digestAt: (time) => `Сводка в ${time}`,
+  settingsLanguage: html`Язык: русский`,
   detailsHidden: 'Детали под спойлером',
   detailsShown: 'Детали открыты',
 

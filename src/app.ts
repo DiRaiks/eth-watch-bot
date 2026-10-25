@@ -19,7 +19,7 @@ import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
 import { createMetrics } from './metrics.js';
-import { setLanguage, t } from './i18n/index.js';
+import { languageOf, setLanguage, t, withLanguage } from './i18n/index.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
 import { priceLookup, type PriceLookup } from './enrich/prices.js';
 import { signatureLookup, type SignatureLookup } from './enrich/signatures.js';
@@ -134,6 +134,16 @@ export const buildApp = async (options: AppOptions) => {
     now: options.now,
   });
   await watches.load();
+
+  // Replies in the chat's language: the one chosen in /settings, else the user's
+  // Telegram language. Before the bot's own commands, which come below.
+  app.tg.bot.use((ctx, next) =>
+    withLanguage(
+      (ctx.chat && watches.prefs(ctx.chat.id).language) ??
+        languageOf(ctx.from?.language_code),
+      next,
+    ),
+  );
 
   const defaultChain = config.chains[0]!.name;
   const digest = new DigestService({

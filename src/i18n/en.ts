@@ -119,6 +119,7 @@ export const en = {
   spamHidden: 'Hide spam',
   everyTransaction: 'Every transaction',
   digestAt: (time: string) => `Digest at ${time}`,
+  settingsLanguage: html`Language: English`,
   detailsHidden: 'Details under a spoiler',
   detailsShown: 'Details shown',
 

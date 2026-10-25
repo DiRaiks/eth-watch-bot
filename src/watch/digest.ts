@@ -4,7 +4,7 @@ import type { Address, Hash } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
 import { addressLink } from '../format.js';
-import { t } from '../i18n/index.js';
+import { t, withLanguage } from '../i18n/index.js';
 import { formatUsd, watchLabel } from './messages.js';
 import { localDay, localHour } from './prefs.js';
 import type { WatchService } from './watch-service.js';
@@ -188,7 +188,10 @@ export class DigestService {
       return watch ? watchLabel(watch) : address;
     };
 
-    if (await deliver(chatId, formatDigest(entries, label, defaultChain))) {
+    const text = withLanguage(watches.prefs(chatId).language, () =>
+      formatDigest(entries, label, defaultChain),
+    );
+    if (await deliver(chatId, text)) {
       await store.markSent(chatId, day);
       return true;
     }
