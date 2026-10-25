@@ -21,7 +21,7 @@ Ethereum, Base, Arbitrum and Optimism.
 
 Watch your own wallets and learn about any transaction you did not make. Add the bot to a chat and send `/watch 0x…`: from then on the chat hears about every transfer of ETH, tokens and NFTs, every contract call, and every approval that lets someone else spend your tokens. Turn on `/messages` to also see the notes people leave in transaction data: birthday wishes, love letters, pleas to hackers, on-chain graffiti.
 
-The bot speaks Russian; the picture shows its real texts.
+The bot speaks English by default and Russian with `LANGUAGE=ru`; the picture shows its real English texts.
 
 ## Features
 
@@ -33,12 +33,12 @@ The bot speaks Russian; the picture shows its real texts.
 - **Readable contract calls.** Common methods are named from a built-in list; others come from the public signature database, only from verified contracts, and are shown as a hint since anyone can register a name. The call's parameters are decoded too: `transfer(to 0x28C6…1d60, amount 250,000 USDC)`, `approve(spender 0x9a3D…5768, amount all)`. Token amounts use the token's decimals, addresses link to the explorer, long values are shortened; parameter names are shown only for built-in methods. Calldata that does not fit the signature falls back to the name alone.
 - **Several chats, one address.** Every chat watching an address gets its own notification.
 - **Mute from the message.** A button under each notification silences the address for 24 hours; another brings it back.
-- **Settings per chat.** `/settings`: which chains, a dollar threshold for incoming transfers, quiet hours in the chat's time zone (messages arrive without a sound; alerts still ring), spam shown with a warning or hidden, and a daily digest instead of a message per incoming transaction.
+- **Settings per chat.** `/settings`: which chains, a dollar threshold for incoming transfers, quiet hours in the chat's time zone (messages arrive without a sound; alerts still ring), spam shown with a warning or hidden, and a daily digest instead of a message per incoming transaction. The digest comes at 09:00 in the chat's time zone (Moscow until changed in `/settings`); the hour itself is fixed.
 - **No missed or repeated blocks.** Each chain is scanned block by block after a few confirmations. Progress is saved after every block, so a restart or an RPC outage resumes where it stopped. After a long outage (over `MAX_LAG_BLOCKS`) it skips to recent blocks instead of replaying stale alerts.
 - **Readable messages only.** Text in transaction data is checked for real words; calldata, inscriptions, swap memos and ids are skipped. Each message is posted once, and the same text mailed by one sender to many addresses is posted once with the number of recipients.
 - **Flood guard.** Above five alerts for one chat, or five messages, in a block, the rest comes as a single summary. Token symbols are shown only when they look like tickers, so spam tokens cannot inject text.
 - **English or Russian.** `LANGUAGE=en` (default) or `LANGUAGE=ru` sets the language of messages, buttons and commands, including the command menu.
-- **HTTP API.** `GET /v1/messages` returns recent messages; `GET /health` reports every chain's lag and the Telegram connection.
+- **HTTP API.** `GET /v1/messages` returns recent messages; `GET /health` reports every chain's lag and the Telegram connection. It always answers 200, so an RPC outage does not restart the container: Docker's "healthy" means the process is up, and `status` in the body (`ok` or `degraded`) tells whether the chains and Telegram are fine.
 - **Prometheus metrics.** `GET /metrics`: scanner progress and lag per chain, notifications by importance, messages found, Telegram updates and deliveries (from tg-kit), and process metrics. The public proxy does not route it; scrape it inside the network.
 
 ## Commands
@@ -103,23 +103,25 @@ docker run -d --name eth-watch-mongo -p 27017:27017 mongo:8
 
 ## Configuration
 
-| Variable                                                              | Default          | Description                                                                  |
-| --------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------- |
-| `RPC_URL_ETHEREUM`, `_BASE`, `_ARBITRUM`, `_OPTIMISM`                 |                  | Chains with an RPC URL are scanned; at least one is required                 |
-| `CONFIRMATIONS_<CHAIN>`                                               | 3 / 10 / 20 / 10 | Blocks to wait before reporting (Ethereum / Base / Arbitrum / Optimism)      |
-| `MESSAGES_CHAINS`                                                     | `ethereum`       | Chains searched for text messages; empty (`,`) turns them off                |
-| `BOT_TOKEN`                                                           |                  | Telegram bot token; without it notifications are logged                      |
-| `BOT_MODE`                                                            | `polling`        | `polling` or `webhook` (needs `BOT_WEBHOOK_URL`, `BOT_WEBHOOK_SECRET`)       |
-| `BOT_ADMINS`                                                          |                  | Telegram user ids allowed to run `/stats`                                    |
-| `MONGO_URI`                                                           |                  | MongoDB (Atlas or self-hosted); in memory without it, required in production |
-| `POLL_INTERVAL_MS`, `MAX_BLOCKS_PER_TICK`                             | `4000`, `50`     | Scanner pace and catch-up batch                                              |
-| `MAX_LAG_BLOCKS`                                                      | `1000`           | Further behind than this, old blocks are skipped                             |
-| `LANGUAGE`                                                            | `en`             | Language of the bot: `en` or `ru`                                            |
-| `PRICES`                                                              | `true`           | Dollar amounts from DefiLlama; `false` keeps the bot off third-party APIs    |
-| `SIGNATURE_LOOKUP`                                                    | `true`           | Method names from the openchain database for selectors not built in          |
-| `MAX_WATCHES_PER_CHAT`                                                | `20`             | Addresses per chat                                                           |
-| `PORT`, `LOG_LEVEL`, `TRUST_PROXY`, `CORS_ORIGINS`                    | `3000`, `info`   | HTTP server                                                                  |
-| `DEFAULT_CHANNEL_ID`, `DEFAULT_ADDRESSES`, `DEFAULT_CHANNEL_MESSAGES` |                  | A chat set up on start: the setup of the old bots keeps working              |
+| Variable                                                              | Default                   | Description                                                                                                                                                    |
+| --------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RPC_URL_ETHEREUM`, `_BASE`, `_ARBITRUM`, `_OPTIMISM`                 |                           | Chains with an RPC URL are scanned; at least one is required                                                                                                   |
+| `RPC_URL`                                                             |                           | Legacy name of `RPC_URL_ETHEREUM`, used when that one is not set                                                                                               |
+| `CONFIRMATIONS_<CHAIN>`                                               | 3 / 10 / 20 / 10          | Blocks to wait before reporting (Ethereum / Base / Arbitrum / Optimism)                                                                                        |
+| `MESSAGES_CHAINS`                                                     | `ethereum`                | Chains searched for text messages; empty (`,`) turns them off                                                                                                  |
+| `BOT_TOKEN`                                                           |                           | Telegram bot token; without it notifications are logged                                                                                                        |
+| `BOT_MODE`                                                            | `polling`                 | `polling` or `webhook` (needs `BOT_WEBHOOK_URL`, `BOT_WEBHOOK_SECRET`)                                                                                         |
+| `BOT_ADMINS`                                                          |                           | Telegram user ids allowed to run `/stats`                                                                                                                      |
+| `MONGO_URI`                                                           |                           | MongoDB (Atlas or self-hosted); in memory without it, required in production                                                                                   |
+| `POLL_INTERVAL_MS`, `MAX_BLOCKS_PER_TICK`                             | `4000`, `50`              | Scanner pace and catch-up batch                                                                                                                                |
+| `MAX_LAG_BLOCKS`                                                      | `1000`                    | Further behind than this, old blocks are skipped                                                                                                               |
+| `LANGUAGE`                                                            | `en`                      | Language of the bot: `en` or `ru`                                                                                                                              |
+| `PRICES`                                                              | `true`                    | Dollar amounts from DefiLlama; `false` keeps the bot off third-party APIs                                                                                      |
+| `SIGNATURE_LOOKUP`                                                    | `true`                    | Method names from the openchain database for selectors not built in                                                                                            |
+| `MAX_WATCHES_PER_CHAT`                                                | `20`                      | Addresses per chat                                                                                                                                             |
+| `PORT`, `HOST`, `LOG_LEVEL`                                           | `3000`, `0.0.0.0`, `info` | HTTP server; under Docker Compose `PORT` from `.env` is ignored (always 3000)                                                                                  |
+| `TRUST_PROXY`, `CORS_ORIGINS`                                         | `0`                       | Proxy hops in front of the app; browser origins allowed to call the API                                                                                        |
+| `DEFAULT_CHANNEL_ID`, `DEFAULT_ADDRESSES`, `DEFAULT_CHANNEL_MESSAGES` |                           | A chat set up on start: the setup of the old bots keeps working. Each default address is added once; one removed with `/unwatch` stays removed after a restart |
 
 Fast chains mean many blocks: Arbitrum makes about four a second, and each watched block costs two RPC calls. Use an RPC plan that fits, or leave the chain out.
 
