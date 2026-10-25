@@ -5,7 +5,7 @@
 A Telegram bot that watches EVM addresses and relays the text messages people write in transactions.
 Ethereum, Base, Arbitrum and Optimism.
 
-[![CI](https://github.com/DiRaiks/eth_monitoring_bot/actions/workflows/ci.yml/badge.svg)](https://github.com/DiRaiks/eth_monitoring_bot/actions/workflows/ci.yml)
+[![CI](https://github.com/DiRaiks/eth-watch-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/DiRaiks/eth-watch-bot/actions/workflows/ci.yml)
 [![node](https://img.shields.io/badge/node-24%2B-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![built with tg-kit](https://img.shields.io/badge/built%20with-%40dirai%2Ftg--kit-26a5e4?logo=telegram&logoColor=white)](https://github.com/DiRaiks/tg-bot-kit)
 [![viem](https://img.shields.io/badge/viem-2-ffc517)](https://viem.sh)
@@ -147,7 +147,7 @@ Tests drive the whole bot through a fake Telegram API and an in-memory chain: co
 
 ## History
 
-This repository merges two older bots: `eth_monitoring_bot` (address alerts) and `eth_messages_bot` (messages in blocks), whose history was imported into this one. The rewrite fixed what they got wrong: chats were lost on restart, addresses were compared case-sensitively, only one chat got each alert, messages could repeat, `/chats` showed every chat id to anyone, and the Docker image carried the bot token.
+This repository, formerly `eth_monitoring_bot` (address alerts), merges it with [`eth_messages_bot`](https://github.com/DiRaiks/eth_messages_bot) (messages in blocks, now archived), whose history was imported into this one. The rewrite fixed what they got wrong: chats were lost on restart, addresses were compared case-sensitively, only one chat got each alert, messages could repeat, `/chats` showed every chat id to anyone, and the Docker image carried the bot token.
 
 ## License
 
