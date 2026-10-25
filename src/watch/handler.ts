@@ -421,7 +421,9 @@ export const addressWatchHandler = ({
       }
 
       const message = (group: TxGroup) =>
-        formatTx(chain, block.number, group, data, label);
+        formatTx(chain, block.number, group, data, label, {
+          hideDetails: prefs.details === 'hidden',
+        });
       const options = (group: TxGroup, silent: boolean) => ({
         replyMarkup: muteKeyboard(group.watches),
         silent,

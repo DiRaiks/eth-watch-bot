@@ -109,6 +109,8 @@ export const en = {
     html`Spam: ${hide ? 'hidden' : 'shown with a warning'}`,
   settingsMode: (digestAt: string | null) =>
     html`Mode: ${digestAt ? `incoming in a digest at ${digestAt}` : 'every transaction'}`,
+  settingsDetails: (hidden: boolean) =>
+    html`Details: ${hidden ? 'under a spoiler, the chat list shows only the event' : 'shown'}`,
   settingsNote: html`<i>Outgoing transfers, token approvals and transfers out of your address that you did not send always arrive, with a sound and no threshold.</i>`,
   fromUsd: (usd: number) => `from $${usd}`,
   allIncoming: 'All incoming',
@@ -117,6 +119,8 @@ export const en = {
   spamHidden: 'Hide spam',
   everyTransaction: 'Every transaction',
   digestAt: (time: string) => `Digest at ${time}`,
+  detailsHidden: 'Details under a spoiler',
+  detailsShown: 'Details shown',
 
   // Daily digest
   digestTitle: html`📋 <b>Daily digest</b>`,
@@ -137,6 +141,11 @@ export const en = {
     html`🚨 …and ${count(n, 'more alert')} in block ${block} (${chain}). Check the addresses in an explorer.`,
   moreTransactions: (n: number, block: string, chain: string) =>
     html`…and ${count(n, 'more transaction')} in block ${block} (${chain})`,
+  eventOutgoing: 'outgoing',
+  eventIncoming: 'incoming',
+  eventApproval: 'token approval',
+  eventTaken: 'taken without you',
+  eventAlert: 'needs attention',
   moreInTx: (count: number) => html`…and ${count} more in this transaction`,
   advice: html`<i>If this was not you: revoke the approvals (revoke.cash) and move the funds to a new wallet.</i>`,
   block: (link: Html, block: string) => html`${link} · block ${block}`,

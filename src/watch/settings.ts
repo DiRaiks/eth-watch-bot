@@ -37,6 +37,7 @@ export const settingsText = (prefs: ChatPrefs, chains: ChainName[]): Html =>
     t.settingsMode(
       prefs.mode === 'digest' ? `${pad(prefs.digestHour)}:00` : null,
     ),
+    t.settingsDetails(prefs.details === 'hidden'),
     '',
     t.settingsNote,
   ]);
@@ -87,7 +88,14 @@ export const settingsKeyboard = (prefs: ChatPrefs, chains: ChainName[]) => {
     .text(
       mark(prefs.mode === 'digest', t.digestAt(`${pad(prefs.digestHour)}:00`)),
       'set:mode:digest',
-    );
+    )
+    .row();
+  keyboard
+    .text(
+      mark(prefs.details === 'hidden', t.detailsHidden),
+      'set:details:hidden',
+    )
+    .text(mark(prefs.details === 'shown', t.detailsShown), 'set:details:shown');
   return keyboard;
 };
 
@@ -128,6 +136,10 @@ export const applySetting = (
     }
     case 'spam':
       return value === 'show' || value === 'hide' ? { spam: value } : null;
+    case 'details':
+      return value === 'hidden' || value === 'shown'
+        ? { details: value }
+        : null;
     case 'mode':
       return value === 'each' || value === 'digest' ? { mode: value } : null;
     default:

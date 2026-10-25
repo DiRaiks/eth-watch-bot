@@ -378,6 +378,24 @@ const MAX_LENGTH = 3500;
 
 const RANK = { alert: 0, outgoing: 1, incoming: 2 } as const;
 
+/** What happened, in a word or two: the only part an alert shows before its spoiler */
+const eventName = (top: Activity | undefined, importance: Importance) => {
+  if (importance === 'alert' && top) {
+    if (
+      top.kind === 'approval' ||
+      top.kind === 'nft-approval' ||
+      top.kind === 'approval-for-all'
+    ) {
+      return t.eventApproval;
+    }
+    if ((top.kind === 'send-token' || top.kind === 'send-nft') && top.sentBy) {
+      return t.eventTaken;
+    }
+    return t.eventAlert;
+  }
+  return importance === 'incoming' ? t.eventIncoming : t.eventOutgoing;
+};
+
 /** One message per transaction: what the chat's addresses did in it, alerts first */
 export const formatTx = (
   chain: ChainName,
@@ -385,25 +403,33 @@ export const formatTx = (
   group: TxGroup,
   data: Enrichment,
   label: (address: Address) => string,
+  { hideDetails = false }: { hideDetails?: boolean } = {},
 ) => {
   const several = group.watches.length > 1;
   const title = group.watches.map(watchLabel).join(', ');
   const icon = group.importance === 'alert' ? '🚨' : '🔔';
-  const lines = [...group.items]
-    .sort((a, b) => RANK[a.importance] - RANK[b.importance])
-    .map((item) => {
-      const line = activityLine(chain, item, data);
-      return several ? html`<b>${label(item.address)}</b>: ${line}` : line;
-    });
+  const items = [...group.items].sort(
+    (a, b) => RANK[a.importance] - RANK[b.importance],
+  );
+  const lines = items.map((item) => {
+    const line = activityLine(chain, item, data);
+    return several ? html`<b>${label(item.address)}</b>: ${line}` : line;
+  });
+  // Nothing sensitive here: the chat list shows it as the message preview
+  const header = html`${icon} <b>${title}</b> · ${CHAINS[chain].title} · ${eventName(items[0], group.importance)}`;
 
-  const build = (shown: number) =>
-    joinHtml([
-      html`${icon} <b>${title}</b> · ${CHAINS[chain].title}`,
+  const build = (shown: number) => {
+    const details = joinHtml([
       ...lines.slice(0, shown),
       shown < lines.length && t.moreInTx(lines.length - shown),
-      group.importance === 'alert' && t.advice,
       t.block(txLink(chain, group.hash), formatBlock(blockNumber)),
     ]);
+    return joinHtml([
+      header,
+      hideDetails ? html`<tg-spoiler>${details}</tg-spoiler>` : details,
+      group.importance === 'alert' && t.advice,
+    ]);
+  };
 
   let shown = Math.min(lines.length, MAX_LINES);
   let message = build(shown);
