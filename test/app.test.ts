@@ -508,6 +508,7 @@ describe('status and health', () => {
           lag: 0,
           error: null,
           stopped: false,
+          rpc: null,
         },
       ],
       telegram: {

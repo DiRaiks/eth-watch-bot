@@ -175,7 +175,7 @@ export const testConfig = (overrides: Partial<Config> = {}): Config => ({
   trustProxy: false,
   corsOrigins: [],
   bot: { token: 'test-token', mode: 'polling', admins: [ADMIN_ID] },
-  chains: [{ name: 'ethereum', rpcUrl: 'http://rpc', confirmations: 0 }],
+  chains: [{ name: 'ethereum', rpcUrls: ['http://rpc'], confirmations: 0 }],
   messagesChains: ['ethereum'],
   pollIntervalMs: 1000,
   maxBlocksPerTick: 50,

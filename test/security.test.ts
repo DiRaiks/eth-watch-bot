@@ -321,8 +321,8 @@ describe('chat settings', () => {
     const t = await start({
       config: {
         chains: [
-          { name: 'ethereum', rpcUrl: 'http://rpc', confirmations: 0 },
-          { name: 'base', rpcUrl: 'http://rpc', confirmations: 0 },
+          { name: 'ethereum', rpcUrls: ['http://rpc'], confirmations: 0 },
+          { name: 'base', rpcUrls: ['http://rpc'], confirmations: 0 },
         ],
       },
     });
@@ -565,9 +565,9 @@ describe('review findings', () => {
     const t = await start({
       config: {
         chains: [
-          { name: 'ethereum', rpcUrl: 'http://rpc', confirmations: 0 },
-          { name: 'base', rpcUrl: 'http://rpc', confirmations: 0 },
-          { name: 'arbitrum', rpcUrl: 'http://rpc', confirmations: 0 },
+          { name: 'ethereum', rpcUrls: ['http://rpc'], confirmations: 0 },
+          { name: 'base', rpcUrls: ['http://rpc'], confirmations: 0 },
+          { name: 'arbitrum', rpcUrls: ['http://rpc'], confirmations: 0 },
         ],
       },
     });

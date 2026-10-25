@@ -3,7 +3,8 @@ import { isLanguage, LANGUAGES, type Language } from './i18n/index.js';
 
 export type ChainConfig = {
   name: ChainName;
-  rpcUrl: string;
+  /** In order of preference: a failing RPC hands its requests to the next */
+  rpcUrls: string[];
   confirmations: number;
 };
 
@@ -98,14 +99,24 @@ export const loadConfig = (env: Env): Config => {
   const chains = CHAIN_NAMES.flatMap((name): ChainConfig[] => {
     const upper = name.toUpperCase();
     // RPC_URL is the old single-chain name for Ethereum
-    const rpcUrl =
-      text(env, `RPC_URL_${upper}`) ??
-      (name === 'ethereum' ? text(env, 'RPC_URL') : undefined);
-    if (!rpcUrl) return [];
+    const key =
+      name === 'ethereum' && !text(env, 'RPC_URL_ETHEREUM')
+        ? 'RPC_URL'
+        : `RPC_URL_${upper}`;
+    // Several URLs, comma-separated, are tried in order
+    const rpcUrls = list(env, key);
+    if (!rpcUrls.length) return [];
+    for (const url of rpcUrls) {
+      if (!/^https?:\/\/\S+$/.test(url)) {
+        throw new ConfigError(
+          `${key}: "${url.slice(0, 40)}" is not an http(s) URL; separate several with commas`,
+        );
+      }
+    }
     return [
       {
         name,
-        rpcUrl,
+        rpcUrls,
         confirmations: integer(
           env,
           `CONFIRMATIONS_${upper}`,

@@ -25,6 +25,8 @@ export type TokenInfo = { symbol: string; decimals: number | null };
 /** What the bot needs from a chain; the viem implementation lives in viem-reader.ts */
 export interface ChainReader {
   getChainId(): Promise<number>;
+  /** Host of the RPC in use, for /health; absent in tests */
+  rpcHost?(): string | null;
   getBlockNumber(): Promise<number>;
   getBlock(number: number): Promise<ScannedBlock>;
   /** Token transfers and approvals of a block (ERC-20, ERC-721, ERC-1155) */

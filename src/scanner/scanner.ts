@@ -13,6 +13,8 @@ export type ScannerStatus = {
   lag: number | null;
   error: string | null;
   stopped: boolean;
+  /** Host of the RPC that answered last, never the full URL */
+  rpc: string | null;
 };
 
 export type BlockScannerOptions = {
@@ -71,6 +73,7 @@ export class BlockScanner {
           : null,
       error: this.error,
       stopped: this.stopped,
+      rpc: this.options.reader.rpcHost?.() ?? null,
     };
   }
 
