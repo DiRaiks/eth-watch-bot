@@ -15,20 +15,25 @@ Ethereum, Base, Arbitrum and Optimism.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/chat-dark.svg" />
-    <img src="docs/chat-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address, the bot then reports a USDC transfer with a mute button, and after /messages on posts a birthday note found in a transaction" />
+    <img src="docs/chat-light.svg" width="640" alt="A Telegram chat: /watch vitalik.eth adds the address; the bot reports a USDC transfer with a mute button, raises an alert for an unlimited USDC approval with advice to revoke it, and after /messages on posts a birthday note found in a transaction" />
   </picture>
 </p>
 
-Add the bot to a chat and send `/watch vitalik.eth`. From then on the chat gets a message whenever the address moves ETH or tokens or calls a contract, with a button to mute it for a day. Turn on `/messages` to also see the notes people leave in transaction data: birthday wishes, love letters, pleas to hackers, on-chain graffiti.
+Watch your own wallets and learn about any transaction you did not make. Add the bot to a chat and send `/watch 0x…`: from then on the chat hears about every transfer of ETH, tokens and NFTs, every contract call, and every approval that lets someone else spend your tokens. Turn on `/messages` to also see the notes people leave in transaction data: birthday wishes, love letters, pleas to hackers, on-chain graffiti.
 
 The bot speaks Russian; the picture shows its real texts.
 
 ## Features
 
 - **Addresses and ENS names.** `/watch 0x…` or `/watch vitalik.eth`, with an optional label. Any letter case works.
-- **Everything an address does.** Native transfers, ERC-20 transfers in and out, contract calls with the method selector, contract creation. One message per transaction, however many watched addresses it touches.
+- **Everything an address does.** ETH, ERC-20, ERC-721 and ERC-1155 transfers in and out, contract calls, contract creation. One message per transaction, however many watched addresses it touches, with amounts in dollars.
+- **Signs of a compromised wallet.** 🚨 alerts for token approvals (unlimited ones called out), Permit2 allowances granted by signing a message, collection-wide NFT approvals, and tokens that leave the wallet in a transaction someone else sent: the way drainers empty wallets. Alerts get through mutes, muted chains, quiet hours, thresholds and the digest, and say what to do next.
+- **No panic over forgeries.** Any contract can emit an event that names your address. An alarming event about a token you never held, with no market price, is shown as a likely fake instead of an alert. The allowance a swap spends is not reported as a new approval.
+- **Address poisoning.** Zero-value "transfers" from your address to a look-alike one are marked as fake, so you do not copy the attacker's address from your history.
+- **Readable method names.** Common methods are named from a built-in list; others come from the public signature database, only from verified contracts, and are shown as a hint since anyone can register a name.
 - **Several chats, one address.** Every chat watching an address gets its own notification.
 - **Mute from the message.** A button under each notification silences the address for 24 hours; another brings it back.
+- **Settings per chat.** `/settings`: which chains, a dollar threshold for incoming transfers, quiet hours in the chat's time zone (messages arrive without a sound; alerts still ring), spam shown with a warning or hidden, and a daily digest instead of a message per incoming transaction.
 - **No missed or repeated blocks.** Each chain is scanned block by block after a few confirmations. Progress is saved after every block, so a restart or an RPC outage resumes where it stopped. After a long outage (over `MAX_LAG_BLOCKS`) it skips to recent blocks instead of replaying stale alerts.
 - **Readable messages only.** Text in transaction data is checked for real words; calldata, inscriptions, swap memos and ids are skipped. Each message is posted once, and the same text mailed by one sender to many addresses is posted once with the number of recipients.
 - **Flood guard.** Above five alerts for one chat, or five messages, in a block, the rest comes as a single summary. Token symbols are shown only when they look like tickers, so spam tokens cannot inject text.
@@ -41,6 +46,7 @@ The bot speaks Russian; the picture shows its real texts.
 | `/watch <address\|ens> [label]` | chat admins               | Watch an address, or change its label           |
 | `/unwatch <address\|label>`     | chat admins               | Stop watching                                   |
 | `/list`                         | everyone                  | Watched addresses and their mute state          |
+| `/settings`                     | chat admins               | Chains, threshold, quiet hours, spam, digest    |
 | `/messages on\|off`             | chat admins               | Messages from transaction data                  |
 | `/status`                       | everyone                  | What this chat follows, how each chain is doing |
 | `/stats`                        | bot admins (`BOT_ADMINS`) | Chats, addresses, subscribers, chains           |
@@ -55,21 +61,27 @@ flowchart LR
   rpc[("RPC per chain")]
   subgraph bot["eth-watch-bot"]
     scanner["BlockScanner<br/><sub>one per chain, confirmations,<br/>checkpoint after each block</sub>"]
-    watch["address-watch<br/><sub>txs + ERC-20 Transfer logs</sub>"]
+    watch["address-watch<br/><sub>txs, token transfers, approvals;<br/>chat settings, digest</sub>"]
+    enrich["enrichment<br/><sub>method names, USD prices</sub>"]
     messages["block-messages<br/><sub>UTF-8 text in tx input</sub>"]
     kit["@dirai/tg-kit<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
     api["Fastify<br/><sub>/v1/messages, /health</sub>"]
   end
-  mongo[("MongoDB<br/><sub>chats, checkpoints, messages</sub>")]
+  mongo[("MongoDB<br/><sub>chats, checkpoints, messages, digests</sub>")]
   tg["Telegram"]
 
   rpc --> scanner --> watch & messages
+  watch --- enrich
   watch & messages --> kit --> tg
   scanner --- mongo
   kit --- mongo
   messages --- mongo
   messages --> api
 ```
+
+Transactions sent for you by a relayer, a smart account or a Safe (CoW Swap and UniswapX fills, ERC-4337 bundlers) also move tokens "in someone else's transaction" and raise the same alert: check the transaction before you panic.
+
+What the bot cannot see: ETH moved by a contract on your behalf (internal transactions) appears only through the call that caused it, and Permit2 allowances show up as the approval to Permit2 plus the transfers they lead to.
 
 Chats and their watched addresses are stored by [@dirai/tg-kit](https://github.com/DiRaiks/tg-bot-kit)'s subscription store; the bot keeps an in-memory index by address so every transaction is a map lookup. When no chat watches anything and no chain is searched for messages, scanners skip ahead without downloading blocks.
 
@@ -100,6 +112,8 @@ docker run -d --name eth-watch-mongo -p 27017:27017 mongo:8
 | `MONGO_URI`                                                           |                  | MongoDB (Atlas or self-hosted); in memory without it, required in production |
 | `POLL_INTERVAL_MS`, `MAX_BLOCKS_PER_TICK`                             | `4000`, `50`     | Scanner pace and catch-up batch                                              |
 | `MAX_LAG_BLOCKS`                                                      | `1000`           | Further behind than this, old blocks are skipped                             |
+| `PRICES`                                                              | `true`           | Dollar amounts from DefiLlama; `false` keeps the bot off third-party APIs    |
+| `SIGNATURE_LOOKUP`                                                    | `true`           | Method names from the openchain database for selectors not built in          |
 | `MAX_WATCHES_PER_CHAT`                                                | `20`             | Addresses per chat                                                           |
 | `PORT`, `LOG_LEVEL`, `TRUST_PROXY`, `CORS_ORIGINS`                    | `3000`, `info`   | HTTP server                                                                  |
 | `DEFAULT_CHANNEL_ID`, `DEFAULT_ADDRESSES`, `DEFAULT_CHANNEL_MESSAGES` |                  | A chat set up on start: the setup of the old bots keeps working              |

@@ -4,11 +4,17 @@ import type { Db } from 'mongodb';
 import type { ChainName } from './chains.js';
 import type { BlockMessage, MessageStore } from './messages/handler.js';
 import type { CheckpointStore } from './scanner/types.js';
+import {
+  memoryDigests,
+  mongoDigests,
+  type DigestStore,
+} from './watch/digest.js';
 
 export type Stores = {
   chats: SubscriptionStore;
   checkpoints: CheckpointStore;
   messages: MessageStore;
+  digests: DigestStore;
 };
 
 /** Messages older than this are dropped from MongoDB */
@@ -48,6 +54,7 @@ export const memoryStores = (): Stores => ({
   chats: memoryStore(),
   checkpoints: memoryCheckpoints(),
   messages: memoryMessages(),
+  digests: memoryDigests(),
 });
 
 type CheckpointDocument = { chain: ChainName; block: number; updatedAt: Date };
@@ -61,6 +68,7 @@ export const mongoStores = async (db: Db): Promise<Stores> => {
   await Promise.all([
     chats.createIndex({ chatId: 1 }, { unique: true }),
     chats.createIndex({ 'settings.watches.address': 1 }),
+    db.collection('digests').createIndex({ chatId: 1 }, { unique: true }),
     checkpoints.createIndex({ chain: 1 }, { unique: true }),
     messages.createIndex({ chain: 1, hash: 1 }, { unique: true }),
     messages.createIndex({ timestamp: -1 }),
@@ -72,6 +80,7 @@ export const mongoStores = async (db: Db): Promise<Stores> => {
 
   return {
     chats: mongoStore(chats),
+    digests: mongoDigests(db.collection('digests')),
     checkpoints: {
       async get(chain) {
         return (await checkpoints.findOne({ chain }))?.block ?? null;

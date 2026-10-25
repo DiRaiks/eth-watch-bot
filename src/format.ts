@@ -7,7 +7,7 @@ import { addressUrl, txUrl, type ChainName } from './chains.js';
 export const shortAddress = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(-4)}`;
 
-const groupThousands = (integer: string) =>
+export const groupThousands = (integer: string) =>
   integer.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 /**
@@ -56,8 +56,13 @@ export const truncate = (text: string, max: number) => {
 };
 
 /** Replies with HTML markup and without link previews */
-export const replyHtml = (ctx: Context, message: Html) =>
+export const replyHtml = (
+  ctx: Context,
+  message: Html,
+  other: Parameters<Context['reply']>[1] = {},
+) =>
   ctx.reply(message.value, {
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
+    ...other,
   });

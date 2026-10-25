@@ -18,11 +18,15 @@ import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
+import { priceLookup, type PriceLookup } from './enrich/prices.js';
+import { signatureLookup, type SignatureLookup } from './enrich/signatures.js';
 import { BlockScanner } from './scanner/scanner.js';
 import type { ChainReader } from './scanner/types.js';
 import type { Stores } from './storage.js';
 import { registerWatchCommands, type ResolveName } from './watch/commands.js';
+import { DigestService } from './watch/digest.js';
 import { addressWatchHandler, type Deliver } from './watch/handler.js';
+import { registerSettings } from './watch/settings.js';
 import { normalizeAddress, WatchService } from './watch/watch-service.js';
 
 export type AppOptions = {
@@ -34,16 +38,22 @@ export type AppOptions = {
   /** Overrides for tests: a fake Telegram API, botInfo, mode `none` */
   bot?: Partial<TgBotOptions>;
   notifier?: TgNotifierOptions;
-  /** Starts the scanners on ready (default true); tests drive them with tick() */
+  /** Method names; defaults to the built-in list plus the public database (SIGNATURE_LOOKUP) */
+  methods?: SignatureLookup;
+  /** USD prices; defaults to DefiLlama (PRICES), null turns them off */
+  prices?: PriceLookup | null;
+  /** Starts the scanners and the digest on ready (default true); tests drive them by hand */
   startScanners?: boolean;
+  now?: () => number;
 };
 
 const START_TEXT = (chains: string) =>
   [
-    `Привет! Я слежу за адресами в ${chains} и сообщаю о переводах ETH и токенов.`,
+    `Привет! Я слежу за адресами в ${chains}: переводы ETH, токенов и NFT, вызовы контрактов и разрешения на токены.`,
+    'Добавьте свои кошельки, и вы узнаете о любой транзакции, которую не делали.',
     '',
     'Добавить адрес: /watch 0x… или /watch vitalik.eth',
-    'Все команды: /help',
+    'Настройки: /settings · Все команды: /help',
   ].join('\n');
 
 export const buildApp = async (options: AppOptions) => {
@@ -111,8 +121,19 @@ export const buildApp = async (options: AppOptions) => {
 
   const watches = new WatchService(stores.chats, {
     maxPerChat: config.maxWatchesPerChat,
+    now: options.now,
   });
   await watches.load();
+
+  const defaultChain = config.chains[0]!.name;
+  const digest = new DigestService({
+    store: stores.digests,
+    watches,
+    deliver: (chatId, message) => deliver(chatId, message, { silent: true }),
+    defaultChain,
+    log: app.log,
+    now: options.now,
+  });
 
   // Messages go first: they are stored once, so a block repeated after a failure of the
   // address handler does not post them again
@@ -122,7 +143,21 @@ export const buildApp = async (options: AppOptions) => {
       store: stores.messages,
       broadcast,
     }),
-    addressWatchHandler({ watches, deliver }),
+    addressWatchHandler({
+      watches,
+      deliver,
+      methods:
+        options.methods ?? signatureLookup({ remote: config.signatureLookup }),
+      prices:
+        options.prices !== undefined
+          ? options.prices
+          : config.prices
+            ? priceLookup()
+            : null,
+      digest,
+      log: app.log,
+      now: options.now,
+    }),
   ];
 
   const scanners = config.chains.flatMap((chain) => {
@@ -146,7 +181,12 @@ export const buildApp = async (options: AppOptions) => {
   registerWatchCommands(app, {
     watches,
     resolveName: options.resolveName,
-    defaultChain: config.chains[0]!.name,
+    defaultChain,
+  });
+  registerSettings(app, {
+    watches,
+    chains: config.chains.map((chain) => chain.name),
+    digest,
   });
   registerCommands(app, {
     watches,
@@ -159,12 +199,16 @@ export const buildApp = async (options: AppOptions) => {
     await bootstrapChat(app, watches, config.bootstrap);
     if (options.startScanners === false) return;
     for (const scanner of scanners) scanner.start(config.pollIntervalMs);
+    digest.start();
   });
   app.addHook('onClose', async () => {
-    await Promise.all(scanners.map((scanner) => scanner.close()));
+    await Promise.all([
+      ...scanners.map((scanner) => scanner.close()),
+      digest.close(),
+    ]);
   });
 
-  return { app, watches, scanners };
+  return { app, watches, scanners, digest };
 };
 
 /** Sets up the chat from DEFAULT_CHANNEL_ID, keeping the setup of the old bots working */

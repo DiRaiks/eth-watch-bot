@@ -1,6 +1,7 @@
 import type { Address, Hash, Hex } from 'viem';
 
 import type { ChainName } from '../chains.js';
+import type { TokenLog } from './token-logs.js';
 
 export type ScannedTransaction = {
   hash: Hash;
@@ -19,16 +20,6 @@ export type ScannedBlock = {
   transactions: ScannedTransaction[];
 };
 
-/** An ERC-20 `Transfer(address indexed from, address indexed to, uint256 value)` log */
-export type TransferLog = {
-  token: Address;
-  from: Address;
-  to: Address;
-  value: bigint;
-  transactionHash: Hash;
-  logIndex: number;
-};
-
 export type TokenInfo = { symbol: string; decimals: number | null };
 
 /** What the bot needs from a chain; the viem implementation lives in viem-reader.ts */
@@ -36,7 +27,22 @@ export interface ChainReader {
   getChainId(): Promise<number>;
   getBlockNumber(): Promise<number>;
   getBlock(number: number): Promise<ScannedBlock>;
-  getTransferLogs(blockHash: Hash): Promise<TransferLog[]>;
+  /** Token transfers and approvals of a block (ERC-20, ERC-721, ERC-1155) */
+  getTokenLogs(
+    blockHash: Hash,
+    /** Skips logs that involve no watched address before decoding them */
+    isWatched?: (address: Address) => boolean,
+  ): Promise<TokenLog[]>;
+  /**
+   * Balance of `owner` in a token at a block: ERC-20 and ERC-721 `balanceOf(owner)`,
+   * ERC-1155 `balanceOf(owner, tokenId)`. Null when the contract does not answer.
+   */
+  getTokenBalance(
+    token: Address,
+    owner: Address,
+    blockNumber: number,
+    tokenId?: bigint,
+  ): Promise<bigint | null>;
   getTokenInfo(token: Address): Promise<TokenInfo>;
 }
 

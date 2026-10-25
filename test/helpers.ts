@@ -4,12 +4,14 @@ import { pad, toHex, type Address, type Hash, type Hex } from 'viem';
 
 import { buildApp } from '../src/app.js';
 import type { Config } from '../src/config.js';
+import type { PriceLookup } from '../src/enrich/prices.js';
+import type { SignatureLookup } from '../src/enrich/signatures.js';
+import type { TokenLog } from '../src/scanner/token-logs.js';
 import type {
   ChainReader,
   ScannedBlock,
   ScannedTransaction,
   TokenInfo,
-  TransferLog,
 } from '../src/scanner/types.js';
 import { memoryStores, type Stores } from '../src/storage.js';
 
@@ -38,6 +40,23 @@ export const BOT_INFO: UserFromGetMe = {
 export const blockHash = (number: number) => pad(toHex(number)) as Hash;
 export const txHash = (n: number) => pad(toHex(1_000_000 + n)) as Hash;
 
+/** A token log as the chain would return it, minus the position in the block */
+export type NewLog = TokenLog extends infer T
+  ? T extends TokenLog
+    ? Omit<T, 'logIndex'>
+    : never
+  : never;
+
+export const erc20 = (
+  n: number,
+  fields: { from: Address; to: Address; value: bigint; token?: Address },
+): NewLog => ({
+  type: 'erc20',
+  token: USDC,
+  transactionHash: txHash(n),
+  ...fields,
+});
+
 export const tx = (
   n: number,
   fields: Partial<ScannedTransaction> = {},
@@ -54,11 +73,14 @@ export const tx = (
 export const fakeChain = (chainId = 1) => {
   let head = 0;
   const blocks = new Map<number, ScannedBlock>();
-  const logs = new Map<Hash, TransferLog[]>();
+  const logs = new Map<Hash, TokenLog[]>();
   const tokens = new Map<Address, TokenInfo>([
     [USDC, { symbol: 'USDC', decimals: 6 }],
   ]);
   const fetched: number[] = [];
+  /** Token balances by `${token}:${owner}`; unknown pairs hold 1, null means no answer */
+  const balances = new Map<string, bigint | null>();
+  const balanceCalls: { token: Address; owner: Address; block: number }[] = [];
 
   const block = (number: number): ScannedBlock =>
     blocks.get(number) ?? {
@@ -75,7 +97,12 @@ export const fakeChain = (chainId = 1) => {
       fetched.push(number);
       return block(number);
     },
-    getTransferLogs: async (hash) => logs.get(hash) ?? [],
+    getTokenLogs: async (hash) => logs.get(hash) ?? [],
+    getTokenBalance: async (token, owner, block) => {
+      balanceCalls.push({ token, owner, block });
+      const key = `${token.toLowerCase()}:${owner.toLowerCase()}`;
+      return balances.has(key) ? balances.get(key)! : 1n;
+    },
     getTokenInfo: async (token) =>
       tokens.get(token) ?? { symbol: '', decimals: null },
   };
@@ -83,18 +110,22 @@ export const fakeChain = (chainId = 1) => {
   return {
     reader,
     fetched,
+    balanceCalls,
+    setBalance(token: Address, owner: Address, balance: bigint | null) {
+      balances.set(`${token.toLowerCase()}:${owner.toLowerCase()}`, balance);
+    },
     setHead(number: number) {
       head = number;
     },
     addBlock(
       number: number,
       transactions: ScannedTransaction[],
-      transfers: Omit<TransferLog, 'logIndex'>[] = [],
+      tokenLogs: NewLog[] = [],
     ) {
       blocks.set(number, { ...block(number), transactions });
       logs.set(
         blockHash(number),
-        transfers.map((transfer, logIndex) => ({ ...transfer, logIndex })),
+        tokenLogs.map((log, logIndex) => ({ ...log, logIndex }) as TokenLog),
       );
     },
   };
@@ -150,6 +181,8 @@ export const testConfig = (overrides: Partial<Config> = {}): Config => ({
   maxBlocksPerTick: 50,
   maxLagBlocks: 1000,
   maxWatchesPerChat: 20,
+  signatureLookup: false,
+  prices: false,
   bootstrap: { addresses: [], messages: false },
   ...overrides,
 });
@@ -160,7 +193,13 @@ export const buildTestApp = async ({
   respond,
   chain = fakeChain(),
   resolveName,
+  methods,
+  prices = null,
+  now,
 }: {
+  methods?: SignatureLookup;
+  prices?: PriceLookup | null;
+  now?: () => number;
   config?: Config;
   stores?: Stores;
   respond?: (call: ApiCall) => unknown;
@@ -173,6 +212,9 @@ export const buildTestApp = async ({
     stores,
     readers: { ethereum: chain.reader },
     resolveName,
+    methods,
+    prices,
+    now,
     logger: false,
     startScanners: false,
     bot: { mode: 'none', botInfo: BOT_INFO, configureApi: api.configureApi },

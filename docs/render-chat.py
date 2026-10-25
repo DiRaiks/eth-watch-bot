@@ -39,6 +39,7 @@ def line(x, y, parts, p):
             "link": f'fill="{p["link"]}"',
             "code": f'fill="{p["code"]}" font-family="{MONO}" font-size="14"',
             "muted": f'fill="{p["muted"]}" font-size="12"',
+            "italic": f'fill="{p["muted"]}" font-style="italic" font-size="14"',
         }[style]
         spans.append(f"<tspan {attrs}>{esc(text)}</tspan>")
     return f'<text x="{x}" y="{y}" font-size="15" xml:space="preserve">{"".join(spans)}</text>'
@@ -57,15 +58,15 @@ def time(x, y, label, p):
 
 def render(p) -> str:
     out = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="604" viewBox="0 0 {W} 604" '
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="780" viewBox="0 0 {W} 780" '
         f'font-family="{FONT}" role="img" aria-label="ETH Watch Bot in a Telegram chat">',
         '<defs><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">'
         f'<circle cx="4" cy="4" r="1.6" fill="{p["pattern"]}"/>'
         f'<circle cx="18" cy="18" r="1.6" fill="{p["pattern"]}"/></pattern>'
-        '<clipPath id="frame"><rect width="720" height="604" rx="16"/></clipPath></defs>',
+        '<clipPath id="frame"><rect width="720" height="780" rx="16"/></clipPath></defs>',
         '<g clip-path="url(#frame)">',
-        f'<rect width="{W}" height="604" fill="{p["bg"]}"/>',
-        f'<rect width="{W}" height="604" fill="url(#dots)"/>',
+        f'<rect width="{W}" height="780" fill="{p["bg"]}"/>',
+        f'<rect width="{W}" height="780" fill="url(#dots)"/>',
         # header
         f'<rect width="{W}" height="60" fill="{p["header"]}"/>',
         f'<circle cx="40" cy="30" r="20" fill="{p["avatar"]}"/>',
@@ -89,10 +90,10 @@ def render(p) -> str:
     # address alert with the mute button
     out.append(bubble(16, 216, 540, 112, p["incoming"], p))
     out.append(line(30, 242, [("🔔 ", "plain"), ("Виталик", "bold"), (" · Ethereum", "plain")], p))
-    out.append(line(30, 266, [("⚙️ Вызов контракта ", "plain"), ("0xA0b8…eB48", "link"),
-                              (" · метод ", "plain"), ("0xa9059cbb", "code")], p))
+    out.append(line(30, 266, [("⚙️ Вызов ", "plain"), ("0xA0b8…eB48", "link"),
+                              (" · ", "plain"), ("transfer", "bold")], p))
     out.append(line(30, 290, [("⬆️ Отправлено ", "plain"), ("250 000", "bold"), (" ", "plain"),
-                              ("USDC", "link"), (" → ", "plain"), ("0x28C6…1d60", "link")], p))
+                              ("USDC", "link"), (" ($249 900) → ", "plain"), ("0x28C6…1d60", "link")], p))
     out.append(line(30, 314, [("Транзакция", "link"), (" · блок 21 004 117", "plain")], p))
     out.append(time(546, 319, "20:58", p))
     out.append(f'<rect x="16" y="334" width="540" height="40" rx="10" fill="{p["button"]}" '
@@ -100,21 +101,34 @@ def render(p) -> str:
     out.append(f'<text x="286" y="359" font-size="15" font-weight="500" fill="{p["button_text"]}" '
                'text-anchor="middle">🔕 Заглушить на 24 ч</text>')
 
+    # an approval: the alert the bot exists for
+    out.append(bubble(16, 390, 540, 160, p["incoming"], p))
+    out.append(line(30, 416, [("🚨 ", "plain"), ("Виталик", "bold"), (" · Ethereum", "plain")], p))
+    out.append(line(30, 440, [("⚙️ Вызов ", "plain"), ("0xA0b8…eB48", "link"), (" · ⚠️ ", "plain"),
+                              ("approve", "bold")], p))
+    out.append(line(30, 464, [("🚨 Разрешение: ", "plain"), ("0x9a3D…5768", "link"),
+                              (" может тратить ", "plain"), ("все", "bold"), (" ваши ", "plain"),
+                              ("USDC", "link")], p))
+    out.append(line(30, 490, [("Если это были не вы: отзовите разрешения (revoke.cash)", "italic")], p))
+    out.append(line(30, 512, [("и выведите средства на новый кошелёк.", "italic")], p))
+    out.append(line(30, 538, [("Транзакция", "link"), (" · блок 21 004 131", "plain")], p))
+    out.append(time(546, 541, "21:02", p))
+
     # /messages on
-    out.append(bubble(564, 392, 140, 40, p["outgoing"], p))
-    out.append(line(578, 417, [("/messages on", "link")], p))
+    out.append(bubble(564, 568, 140, 40, p["outgoing"], p))
+    out.append(line(578, 593, [("/messages on", "link")], p))
 
     # a message from a block
-    out.append(bubble(16, 448, 540, 138, p["incoming"], p))
-    out.append(line(30, 474, [("✉️ ", "plain"), ("Сообщение в блоке 21 004 120", "bold"),
+    out.append(bubble(16, 624, 540, 138, p["incoming"], p))
+    out.append(line(30, 650, [("✉️ ", "plain"), ("Сообщение в блоке 21 004 120", "bold"),
                               (" · Ethereum", "plain")], p))
-    out.append(f'<rect x="30" y="486" width="512" height="56" rx="6" fill="{p["quote"]}"/>')
-    out.append(f'<rect x="30" y="486" width="3" height="56" rx="1.5" fill="{p["link"]}"/>')
-    out.append(line(44, 509, [("С днём рождения, Аня! Пусть эта строчка", "plain")], p))
-    out.append(line(44, 531, [("останется в блокчейне навсегда.", "plain")], p))
-    out.append(line(30, 566, [("0x1f9a…02bc", "link"), (" → ", "plain"), ("0xae7a…fE84", "link"),
+    out.append(f'<rect x="30" y="662" width="512" height="56" rx="6" fill="{p["quote"]}"/>')
+    out.append(f'<rect x="30" y="662" width="3" height="56" rx="1.5" fill="{p["link"]}"/>')
+    out.append(line(44, 685, [("С днём рождения, Аня! Пусть эта строчка", "plain")], p))
+    out.append(line(44, 707, [("останется в блокчейне навсегда.", "plain")], p))
+    out.append(line(30, 742, [("0x1f9a…02bc", "link"), (" → ", "plain"), ("0xae7a…fE84", "link"),
                               (" · ", "plain"), ("Транзакция", "link")], p))
-    out.append(time(546, 577, "21:03", p))
+    out.append(time(546, 753, "21:03", p))
 
     out.append("</g></svg>")
     return "\n".join(out) + "\n"
