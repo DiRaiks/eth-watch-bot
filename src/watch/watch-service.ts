@@ -25,6 +25,10 @@ const key = (address: string) => address.toLowerCase();
 const readWatches = (settings: Record<string, unknown>): Watch[] =>
   Array.isArray(settings.watches) ? (settings.watches as Watch[]) : [];
 
+/** Default addresses the chat was ever given, watched or since removed */
+const readSeeded = (settings: Record<string, unknown>): Address[] =>
+  Array.isArray(settings.seeded) ? (settings.seeded as Address[]) : [];
+
 /**
  * Watched addresses live in the chat's settings of the subscription store. An in-memory
  * index by lowercase address answers "who watches this address" for every transaction.
@@ -157,6 +161,36 @@ export class WatchService {
         return [...watches, watch];
       });
       return result;
+    });
+  }
+
+  /**
+   * Adds the default addresses the chat was never given before, so one removed with
+   * /unwatch stays removed after a restart. Resolves with the addresses added.
+   */
+  seed(chatId: number, addresses: Address[]): Promise<Address[]> {
+    return this.withChat(chatId, async () => {
+      const chat = await this.store.get(chatId);
+      const settings = chat?.settings ?? {};
+      const seeded = readSeeded(settings);
+      let watches = readWatches(settings);
+      const done = [...seeded];
+      const added: Address[] = [];
+      for (const address of addresses) {
+        if (done.some((a) => key(a) === key(address))) continue;
+        if (!watches.some((w) => key(w.address) === key(address))) {
+          // Over the limit: not seeded, so it is tried again on the next start
+          if (watches.length >= this.options.maxPerChat) continue;
+          watches = [...watches, { address }];
+          added.push(address);
+        }
+        done.push(address);
+      }
+      if (done.length === seeded.length) return added;
+      const next = { ...settings, watches, seeded: done };
+      await this.store.save(chatId, { settings: next });
+      this.indexChat(chatId, next);
+      return added;
     });
   }
 

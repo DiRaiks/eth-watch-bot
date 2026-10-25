@@ -589,8 +589,23 @@ describe('startup', () => {
     expect(await stores.chats.get(-100)).toEqual({
       chatId: -100,
       topics: ['messages'],
-      settings: { watches: [{ address: ALICE }] },
+      settings: { watches: [{ address: ALICE }], seeded: [ALICE] },
     });
+  });
+
+  it('does not bring back a default address after /unwatch on restart', async () => {
+    const stores = memoryStores();
+    const bootstrap = (addresses: string[]) =>
+      testConfig({ bootstrap: { chatId: -100, addresses, messages: false } });
+
+    const first = await start({ stores, config: bootstrap([ALICE]) });
+    await first.watches.remove(-100, ALICE);
+    await first.app.close();
+
+    // Restart with one more default: only the new one is added
+    const second = await start({ stores, config: bootstrap([ALICE, BOB]) });
+    expect(await second.watches.list(-100)).toEqual([{ address: BOB }]);
+    expect(second.watches.watchers(ALICE)).toEqual([]);
   });
 
   it('logs notifications when there is no bot token', async () => {
