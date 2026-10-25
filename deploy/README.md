@@ -10,7 +10,7 @@ One VPS runs the bot with Docker Compose:
 
 A polling bot needs neither Caddy nor an open port. Add the `web` profile for webhook mode or to publish `GET /v1/messages`.
 
-After CI passes on `main`, the deploy workflow builds the image, tags it with the commit SHA and `latest`, and pushes it to GHCR. When the server is configured, the workflow uploads `compose.yml` and `Caddyfile`, pulls the new image, restarts the stack and waits for the health check. Until then the deploy job is skipped, so pushes stay green.
+After CI passes on `main`, the deploy workflow builds the image, tags it with the commit SHA and `latest`, and pushes it to GHCR. When the server is configured, the workflow uploads `compose.yml` and `Caddyfile`, pulls the new image, restarts the stack and waits for the health check. A failed CI run deploys nothing, and the deploy builds the exact commit CI tested. Until the server is configured the deploy job is skipped, so pushes stay green.
 
 ## First deployment
 
@@ -25,7 +25,7 @@ sudo mkdir -p /opt/eth-watch-bot && sudo chown <deploy-user> /opt/eth-watch-bot
 sudo ufw allow 80,443/tcp
 ```
 
-Create `/opt/eth-watch-bot/.env` from [`.env.example`](.env.example): at least one `RPC_URL_*`, `BOT_TOKEN` and `MONGO_URI`. For the `web` profile add `DOMAIN` (an A record pointing to the server) and `TRUST_PROXY=1`; for webhook mode `BOT_MODE=webhook`, `BOT_WEBHOOK_URL=https://<DOMAIN>` and `BOT_WEBHOOK_SECRET` (`openssl rand -hex 32`).
+Create `/opt/eth-watch-bot/.env` from [`.env.example`](.env.example): at least one `RPC_URL_*`, `BOT_TOKEN` and `MONGO_URI`. `PORT` is ignored there: compose runs the bot on 3000. With the `mongo` profile, `MONGO_DB` (default `eth-watch`) must name the database in `MONGO_URI`, or the backups dump the wrong one. For the `web` profile add `DOMAIN` (an A record pointing to the server) and `TRUST_PROXY=1`; for webhook mode `BOT_MODE=webhook`, `BOT_WEBHOOK_URL=https://<DOMAIN>` and `BOT_WEBHOOK_SECRET` (`openssl rand -hex 32`).
 
 Make sure the old bots are stopped: two processes polling one token steal each other's updates.
 
@@ -38,15 +38,16 @@ ssh-copy-id -i ~/.ssh/eth-watch-bot-deploy.pub <deploy-user>@<vps>
 
 ### 2. GitHub
 
-Settings → Environments → **production**:
+Settings → Environments → **production**, the secrets:
 
-| Type     | Name          | Value                                                    |
-| -------- | ------------- | -------------------------------------------------------- |
-| secret   | `VPS_HOST`    | Server IP or host name                                   |
-| secret   | `VPS_USER`    | `<deploy-user>`                                          |
-| secret   | `VPS_SSH_KEY` | Private key `~/.ssh/eth-watch-bot-deploy`                |
-| secret   | `VPS_PORT`    | Only if SSH is not on port 22                            |
-| variable | `DEPLOY_PATH` | `/opt/eth-watch-bot` (setting it enables the deploy job) |
+| Name          | Value                                     |
+| ------------- | ----------------------------------------- |
+| `VPS_HOST`    | Server IP or host name                    |
+| `VPS_USER`    | `<deploy-user>`                           |
+| `VPS_SSH_KEY` | Private key `~/.ssh/eth-watch-bot-deploy` |
+| `VPS_PORT`    | Only if SSH is not on port 22             |
+
+Settings → Secrets and variables → Actions → **Variables**, a repository variable: `DEPLOY_PATH` = `/opt/eth-watch-bot`. Setting it enables the deploy job. It must be a repository variable, not one of the `production` environment: the job's `if` is evaluated before the environment is attached, so an environment variable leaves the job skipped forever.
 
 The server logs in to GHCR with the workflow's short-lived token; nothing else to register.
 
@@ -57,7 +58,7 @@ gh workflow run deploy.yml --ref main
 gh run watch
 ```
 
-- The run reaches "bot is healthy".
+- The run reaches "bot is healthy". Docker's "healthy" only means the process is up: `/health` always answers 200 so an RPC outage does not restart the container, and `status` in its body (`ok` or `degraded`) tells whether the chains and Telegram are fine.
 - `docker compose logs bot` shows "scanner starts at the current block" for each chain, then "telegram polling started" (or "telegram webhook set").
 - `$compose exec bot wget -qO- http://127.0.0.1:3000/metrics | grep eth_watch_lag_blocks` shows a small lag per chain. To collect metrics, run Prometheus in the same Docker network; `/metrics` is not public.
 - `/status` in a chat lists every chain in green.
@@ -80,7 +81,7 @@ $compose logs -f bot
 $compose exec -T mongo mongorestore --gzip --archive --drop < backups/eth-watch-<timestamp>.archive.gz
 ```
 
-**Rescan from a block:** stop the bot, set the checkpoint, start it again. Notifications for those blocks are sent again; messages are not, they are stored once.
+**Rescan from a block:** stop the bot, set the checkpoint, start it again (use your `MONGO_DB` in place of `eth-watch` if you changed it). Notifications for those blocks are sent again; messages are not, they are stored once.
 
 ```bash
 $compose stop bot

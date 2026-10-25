@@ -121,4 +121,34 @@ describe('WatchService', () => {
     await watches.load();
     expect(watches.hasWatches()).toBe(false);
   });
+
+  it('seeds each default address once, so an unwatched one stays removed', async () => {
+    const { store, watches } = setup();
+    expect(await watches.seed(1, [ALICE])).toEqual([ALICE]);
+    await watches.remove(1, ALICE);
+
+    // A restart: a new service over the same store seeds again, with a new default
+    const restarted = new WatchService(store, { maxPerChat: 20 });
+    await restarted.load();
+    expect(await restarted.seed(1, [ALICE, BOB])).toEqual([BOB]);
+    expect(await restarted.list(1)).toEqual([{ address: BOB }]);
+    expect(restarted.isWatched(ALICE)).toBe(false);
+    expect(await restarted.seed(1, [ALICE, BOB])).toEqual([]);
+  });
+
+  it('marks an address already watched as seeded without adding it twice', async () => {
+    const { watches } = setup();
+    await watches.add(1, ALICE, 'Alice');
+    expect(await watches.seed(1, [ALICE])).toEqual([]);
+    expect(await watches.list(1)).toEqual([{ address: ALICE, label: 'Alice' }]);
+    await watches.remove(1, ALICE);
+    expect(await watches.seed(1, [ALICE])).toEqual([]);
+  });
+
+  it('leaves a default over the limit unseeded for the next start', async () => {
+    const { watches } = setup(1);
+    expect(await watches.seed(1, [ALICE, BOB])).toEqual([ALICE]);
+    await watches.remove(1, ALICE);
+    expect(await watches.seed(1, [ALICE, BOB])).toEqual([BOB]);
+  });
 });

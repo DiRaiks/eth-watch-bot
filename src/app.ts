@@ -237,19 +237,19 @@ const bootstrapChat = async (
   const { chatId } = bootstrap;
   if (chatId === undefined) return;
 
-  for (const input of bootstrap.addresses) {
+  const addresses = bootstrap.addresses.flatMap((input) => {
     const address = normalizeAddress(input);
     if (!address) {
       app.log.warn(
         { address: input },
         'DEFAULT_ADDRESSES: not an address, skipped',
       );
-      continue;
+      return [];
     }
-    const existing = await watches.list(chatId);
-    if (existing.some((watch) => watch.address === address)) continue;
-    await watches.add(chatId, address);
-  }
+    return [address];
+  });
+  // Each address once per chat: an /unwatch is not undone by the next restart
+  await watches.seed(chatId, addresses);
   if (bootstrap.messages) {
     await app.subscriptions.subscribe(chatId, [MESSAGES_TOPIC]);
   }

@@ -359,7 +359,6 @@ export type TxGroup = {
   importance: Importance;
 };
 
-/** One message per transaction: what the chat's addresses did in it */
 /** Lines per message; a transaction can touch hundreds of tokens */
 const MAX_LINES = 12;
 /** Telegram allows 4096 characters; links take more than they show */
