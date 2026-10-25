@@ -34,8 +34,8 @@ export type Activity = Base &
   (
     | { kind: 'send-native'; to: Address; value: bigint }
     | { kind: 'receive-native'; from: Address; value: bigint }
-    | { kind: 'call'; contract: Address; selector: Hex }
-    | { kind: 'called'; caller: Address; selector: Hex | null }
+    | { kind: 'call'; contract: Address; selector: Hex; input: Hex }
+    | { kind: 'called'; caller: Address; selector: Hex | null; input: Hex }
     | { kind: 'create' }
     | {
         kind: 'send-token' | 'receive-token';
@@ -128,6 +128,7 @@ export const collectActivity = (
           kind: 'call',
           contract: tx.to,
           selector: selector ?? '0x',
+          input: tx.input,
         });
       }
     }
@@ -152,6 +153,7 @@ export const collectActivity = (
               kind: 'called',
               caller: tx.from,
               selector,
+              input: tx.input,
             },
       );
     }

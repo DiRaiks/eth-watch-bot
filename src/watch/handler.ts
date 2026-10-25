@@ -4,6 +4,7 @@ import { InlineKeyboard } from 'grammy';
 import type { Address, Hex } from 'viem';
 
 import { CHAINS } from '../chains.js';
+import { callToken } from '../enrich/calldata.js';
 import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
@@ -118,6 +119,16 @@ const selectorOf = (activity: Activity): Hex | null =>
     ? activity.selector
     : null;
 
+const calledToken = (activity: Activity): Address | null => {
+  if (activity.kind === 'call') {
+    return callToken(activity.selector, activity.input, activity.contract);
+  }
+  if (activity.kind === 'called') {
+    return callToken(activity.selector, activity.input, activity.address);
+  }
+  return null;
+};
+
 /**
  * Whether the address really holds the token an alert is about. Any contract can emit a
  * Transfer or Approval naming any address; a token the owner never held cannot be taken
@@ -173,9 +184,12 @@ const enrich = async (
     (a, b) =>
       Number(b.importance === 'alert') - Number(a.importance === 'alert'),
   );
+  // Then tokens of called contracts, for the amounts in their arguments
   const tokens = [
     ...new Set(
-      byImportance.map(tokenOf).filter((t): t is Address => t !== null),
+      [...byImportance.map(tokenOf), ...activity.map(calledToken)].filter(
+        (t): t is Address => t !== null,
+      ),
     ),
   ].slice(0, MAX_TOKENS);
   const selectors = [

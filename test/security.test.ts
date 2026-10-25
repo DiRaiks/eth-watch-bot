@@ -1,5 +1,5 @@
 import type { Address } from 'viem';
-import { maxUint256 } from 'viem';
+import { encodeFunctionData, maxUint256, parseAbiItem } from 'viem';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { PriceLookup } from '../src/enrich/prices.js';
@@ -212,10 +212,34 @@ describe('message details', () => {
     expect(t.api.texts()[0]).not.toContain('$');
   });
 
+  it('decodes call parameters, with amounts in the called token', async () => {
+    const t = await start();
+    const transfer = encodeFunctionData({
+      abi: [parseAbiItem('function transfer(address,uint256)')],
+      args: [CAROL, 2_500_000n],
+    });
+    const permit2 = encodeFunctionData({
+      abi: [parseAbiItem('function approve(address,address,uint160,uint48)')],
+      args: [USDC, CAROL, 2n ** 160n - 1n, 1_800_000_000],
+    });
+    await mine(t, [
+      tx(1, { from: ALICE, to: USDC, input: transfer }),
+      tx(2, { from: ALICE, to: BOB, input: permit2 }),
+    ]);
+    const [sent, approved] = t.api.texts();
+    expect(sent).toContain('<b>transfer</b>(to <a href=');
+    expect(sent).toContain('amount 2.5 USDC)');
+    // Permit2 counts the amount in the token named by the first argument
+    expect(approved).toContain('>USDC</a>, spender');
+    expect(approved).toContain('amount <b>все</b>, expiration');
+  });
+
   it('marks method names from the public database as hints', async () => {
     const t = await start({
       methods: async (selector) =>
-        selector === '0x12345678' ? { name: 'claim', trusted: false } : null,
+        selector === '0x12345678'
+          ? { name: 'claim', trusted: false, signature: null }
+          : null,
     });
     await mine(t, [
       tx(1, { from: ALICE, to: CAROL, input: '0x12345678' }),

@@ -1,36 +1,41 @@
 import { toFunctionSelector, type Hex } from 'viem';
 
-/** Methods worth recognising without a network call; selectors are computed, not copied */
+/**
+ * Methods worth recognising without a network call; selectors are computed, not copied.
+ * Parameter names are shown in messages, so they describe what the value means.
+ */
 const KNOWN_SIGNATURES = [
   // ERC-20 / ERC-721 / ERC-1155: transfers and approvals
-  'transfer(address,uint256)',
-  'transferFrom(address,address,uint256)',
-  'approve(address,uint256)',
-  'increaseAllowance(address,uint256)',
-  'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)',
-  'setApprovalForAll(address,bool)',
-  'safeTransferFrom(address,address,uint256)',
-  'safeTransferFrom(address,address,uint256,bytes)',
-  'safeTransferFrom(address,address,uint256,uint256,bytes)',
-  'safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)',
+  'transfer(address to,uint256 amount)',
+  'transferFrom(address from,address to,uint256 amount)',
+  'approve(address spender,uint256 amount)',
+  'increaseAllowance(address spender,uint256 amount)',
+  'permit(address owner,address spender,uint256 amount,uint256 deadline,uint8 v,bytes32 r,bytes32 s)',
+  'setApprovalForAll(address operator,bool approved)',
+  'safeTransferFrom(address from,address to,uint256 tokenId)',
+  'safeTransferFrom(address from,address to,uint256 tokenId,bytes data)',
+  'safeTransferFrom(address from,address to,uint256 id,uint256 amount,bytes data)',
+  'safeBatchTransferFrom(address from,address to,uint256[] ids,uint256[] amounts,bytes data)',
   // Uniswap Permit2
-  'approve(address,address,uint160,uint48)',
-  'permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)',
+  'approve(address token,address spender,uint160 amount,uint48 expiration)',
+  'permit(address owner,((address token,uint160 amount,uint48 expiration,uint48 nonce) details,address spender,uint256 sigDeadline) permitSingle,bytes signature)',
   // WETH and vaults
   'deposit()',
-  'withdraw(uint256)',
+  'withdraw(uint256 amount)',
   // Routers and wallets
-  'multicall(bytes[])',
-  'multicall(uint256,bytes[])',
-  'execute(bytes,bytes[],uint256)',
-  'execute(bytes,bytes[])',
-  'swapExactETHForTokens(uint256,address[],address,uint256)',
-  'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
-  'swapExactTokensForETH(uint256,uint256,address[],address,uint256)',
-  'execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)',
+  'multicall(bytes[] calls)',
+  'multicall(uint256 deadline,bytes[] calls)',
+  'execute(bytes commands,bytes[] inputs,uint256 deadline)',
+  'execute(bytes commands,bytes[] inputs)',
+  'swapExactETHForTokens(uint256 amountOutMin,address[] path,address to,uint256 deadline)',
+  'swapExactTokensForTokens(uint256 amountIn,uint256 amountOutMin,address[] path,address to,uint256 deadline)',
+  'swapExactTokensForETH(uint256 amountIn,uint256 amountOutMin,address[] path,address to,uint256 deadline)',
+  'execTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,bytes signatures)',
 ] as const;
 
 const SAFE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/;
+/** Types only, as the signature database stores them: no names, nothing but the ABI grammar */
+const SAFE_TYPES = /^\([a-z0-9,()[\]]{0,1000}\)$/;
 
 const nameOf = (signature: string) =>
   signature.slice(0, signature.indexOf('('));
@@ -38,9 +43,13 @@ const nameOf = (signature: string) =>
 const KNOWN = new Map<Hex, string>(
   KNOWN_SIGNATURES.map((signature) => [
     toFunctionSelector(signature),
-    nameOf(signature),
+    signature,
   ]),
 );
+
+/** The built-in signature of a selector, with parameter names */
+export const knownSignature = (selector: Hex): string | null =>
+  KNOWN.get(selector) ?? null;
 
 /** Methods that hand control over tokens to someone else */
 export const RISKY_METHODS = new Set([
@@ -54,6 +63,11 @@ export type MethodName = {
   name: string;
   /** False for names from the public database: anyone can register a misleading one */
   trusted: boolean;
+  /**
+   * Full signature to decode the call with; null when it could not be used. Signatures
+   * from the database carry no parameter names.
+   */
+  signature: string | null;
 };
 
 export type SignatureLookup = (selector: Hex) => Promise<MethodName | null>;
@@ -107,14 +121,21 @@ export const signatureLookup = ({
     const match = body.result?.function?.[selector]?.find(
       (entry) => !entry.filtered && entry.hasVerifiedContract,
     );
-    const name = match && nameOf(match.name);
+    if (!match) return null;
+    const name = nameOf(match.name);
     // Names come from a public database: plain identifiers only, nothing to mislead with
-    return name && SAFE_NAME.test(name) ? { name, trusted: false } : null;
+    if (!SAFE_NAME.test(name)) return null;
+    const types = match.name.slice(name.length);
+    return {
+      name,
+      trusted: false,
+      signature: SAFE_TYPES.test(types) ? match.name : null,
+    };
   };
 
   return async (selector) => {
     const known = KNOWN.get(selector);
-    if (known) return { name: known, trusted: true };
+    if (known) return { name: nameOf(known), trusted: true, signature: known };
     if (!remote) return null;
 
     const cached = cache.get(selector);
