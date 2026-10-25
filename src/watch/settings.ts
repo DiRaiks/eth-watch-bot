@@ -4,7 +4,14 @@ import { InlineKeyboard, type Context } from 'grammy';
 
 import { CHAINS, isChainName, type ChainName } from '../chains.js';
 import { replyHtml } from '../format.js';
-import { t } from '../i18n/index.js';
+import {
+  currentLanguage,
+  isLanguage,
+  LANGUAGE_NAMES,
+  LANGUAGES,
+  t,
+  withLanguage,
+} from '../i18n/index.js';
 import { canManage } from './commands.js';
 import {
   formatTimeZone,
@@ -38,6 +45,7 @@ export const settingsText = (prefs: ChatPrefs, chains: ChainName[]): Html =>
       prefs.mode === 'digest' ? `${pad(prefs.digestHour)}:00` : null,
     ),
     t.settingsDetails(prefs.details === 'hidden'),
+    t.settingsLanguage,
     '',
     t.settingsNote,
   ]);
@@ -95,7 +103,16 @@ export const settingsKeyboard = (prefs: ChatPrefs, chains: ChainName[]) => {
       mark(prefs.details === 'hidden', t.detailsHidden),
       'set:details:hidden',
     )
-    .text(mark(prefs.details === 'shown', t.detailsShown), 'set:details:shown');
+    .text(mark(prefs.details === 'shown', t.detailsShown), 'set:details:shown')
+    .row();
+  // The language replies use now: the chosen one, or the user's Telegram language
+  const shown = prefs.language ?? currentLanguage();
+  for (const language of LANGUAGES) {
+    keyboard.text(
+      mark(language === shown, LANGUAGE_NAMES[language]),
+      `set:lang:${language}`,
+    );
+  }
   return keyboard;
 };
 
@@ -140,6 +157,8 @@ export const applySetting = (
       return value === 'hidden' || value === 'shown'
         ? { details: value }
         : null;
+    case 'lang':
+      return isLanguage(value) ? { language: value } : null;
     case 'mode':
       return value === 'each' || value === 'digest' ? { mode: value } : null;
     default:
@@ -188,14 +207,17 @@ export const registerSettings = (
     if (!changed) return ctx.answerCallbackQuery();
     if (prefs.mode === 'each') await digest?.discard(chatId);
 
-    const { text, keyboard } = render(prefs);
-    await ctx
-      .editMessageText(text.value, {
-        parse_mode: 'HTML',
-        reply_markup: keyboard,
-        link_preview_options: { is_disabled: true },
-      })
-      .catch(() => undefined);
-    return ctx.answerCallbackQuery({ text: t.saved });
+    // A new language shows at once, in this very message
+    return withLanguage(prefs.language, async () => {
+      const { text, keyboard } = render(prefs);
+      await ctx
+        .editMessageText(text.value, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard,
+          link_preview_options: { is_disabled: true },
+        })
+        .catch(() => undefined);
+      return ctx.answerCallbackQuery({ text: t.saved });
+    });
   });
 };

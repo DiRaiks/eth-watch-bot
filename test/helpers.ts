@@ -256,6 +256,8 @@ type ChatOptions = {
   chatId?: number;
   userId?: number;
   chatType?: 'private' | 'group';
+  /** The user's Telegram language */
+  languageCode?: string;
 };
 
 const chat = (chatId: number, chatType: 'private' | 'group') =>
@@ -265,14 +267,24 @@ const chat = (chatId: number, chatType: 'private' | 'group') =>
 
 export const message = (
   text: string,
-  { chatId = 10, userId = 20, chatType = 'private' }: ChatOptions = {},
+  {
+    chatId = 10,
+    userId = 20,
+    chatType = 'private',
+    languageCode,
+  }: ChatOptions = {},
 ): Update => ({
   update_id: ++updateId,
   message: {
     message_id: updateId,
     date: 0,
     chat: chat(chatId, chatType),
-    from: { id: userId, is_bot: false, first_name: 'U' },
+    from: {
+      id: userId,
+      is_bot: false,
+      first_name: 'U',
+      ...(languageCode && { language_code: languageCode }),
+    },
     text,
     entities: text.startsWith('/')
       ? [{ type: 'bot_command', offset: 0, length: text.split(' ')[0]!.length }]

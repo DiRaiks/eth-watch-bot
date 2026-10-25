@@ -1,4 +1,5 @@
 import { isChainName, type ChainName } from '../chains.js';
+import { isLanguage, type Language } from '../i18n/index.js';
 
 /** How a chat wants its alerts; set with /settings */
 export type ChatPrefs = {
@@ -24,6 +25,8 @@ export type ChatPrefs = {
    * list and a glance at the screen show only which address did what
    */
   details: 'hidden' | 'shown';
+  /** The chat's language; the bot's default (LANGUAGE) until chosen */
+  language?: Language;
 };
 
 export const DEFAULT_PREFS: ChatPrefs = {
@@ -101,6 +104,8 @@ export const readPrefs = (settings: Record<string, unknown>): ChatPrefs => {
     mode: raw.mode === 'digest' ? 'digest' : 'each',
     digestHour: hour(raw.digestHour, DEFAULT_PREFS.digestHour),
     details: raw.details === 'shown' ? 'shown' : DEFAULT_PREFS.details,
+    ...(typeof raw.language === 'string' &&
+      isLanguage(raw.language) && { language: raw.language }),
   };
 };
 

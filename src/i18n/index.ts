@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { en, type Texts } from './en.js';
 import { ru } from './ru.js';
 
@@ -11,12 +13,38 @@ export const isLanguage = (value: string): value is Language =>
 
 const TEXTS: Record<Language, Texts> = { en, ru };
 
-/**
- * Texts of the bot's language. The language is one per process (LANGUAGE), so it is a
- * live binding set on start rather than a parameter of every formatter.
- */
-export let t: Texts = en;
+let fallback: Language = 'en';
+const current = new AsyncLocalStorage<Language>();
 
+/** The language texts are in right now */
+export const currentLanguage = (): Language => current.getStore() ?? fallback;
+
+/** Each language under its own name, so it can be found by someone who reads only it */
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: '🇬🇧 English',
+  ru: '🇷🇺 Русский',
+};
+
+/**
+ * Texts of the chat being served: its own language inside `withLanguage`, the bot's
+ * default (LANGUAGE) elsewhere. A proxy, so formatters keep reading `t.something`
+ * instead of taking the language as a parameter.
+ */
+export const t: Texts = new Proxy({} as Texts, {
+  get: (_target, key) => TEXTS[currentLanguage()][key as keyof Texts],
+});
+
+/** The bot's default language, from LANGUAGE */
 export const setLanguage = (language: Language) => {
-  t = TEXTS[language];
+  fallback = language;
+};
+
+/** Runs `fn`, including what it awaits, in the language; the default when undefined */
+export const withLanguage = <T>(language: Language | undefined, fn: () => T) =>
+  language ? current.run(language, fn) : fn();
+
+/** A Telegram client's `language_code` as one of the bot's languages, if it has it */
+export const languageOf = (code: string | undefined): Language | undefined => {
+  const base = code?.toLowerCase().split('-')[0];
+  return base && isLanguage(base) ? base : undefined;
 };

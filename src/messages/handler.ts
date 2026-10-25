@@ -59,7 +59,8 @@ export const blockMessagesHandler = ({
 }: {
   chains: ChainName[];
   store: MessageStore;
-  broadcast: (message: Html) => Promise<unknown>;
+  /** Posts to every subscribed chat; the text is built per language of the chats */
+  broadcast: (format: () => Html) => Promise<unknown>;
   /** Called for every new message, e.g. to count it */
   onFound?: (chain: ChainName) => void;
 }): BlockHandler => ({
@@ -96,11 +97,11 @@ export const blockMessagesHandler = ({
     }
     const fresh = [...mailings.values()].filter((mailing) => mailing.fresh);
     for (const { first, recipients } of fresh.slice(0, MAX_POSTS_PER_BLOCK)) {
-      await broadcast(formatMessage(first, recipients));
+      await broadcast(() => formatMessage(first, recipients));
     }
     const rest = fresh.length - MAX_POSTS_PER_BLOCK;
     if (rest > 0) {
-      await broadcast(
+      await broadcast(() =>
         t.moreMessages(rest, formatBlock(block.number), CHAINS[chain].title),
       );
     }

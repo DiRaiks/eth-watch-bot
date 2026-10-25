@@ -8,7 +8,7 @@ import { callToken } from '../enrich/calldata.js';
 import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
-import { t } from '../i18n/index.js';
+import { t, withLanguage } from '../i18n/index.js';
 import type {
   BlockHandler,
   ChainReader,
@@ -519,96 +519,99 @@ export const addressWatchHandler = ({
 
     for (const [chatId, chatGroups] of groups) {
       const prefs = watches.prefs(chatId);
-      const label = (address: Address) => {
-        for (const group of chatGroups.values()) {
-          const watch = group.watches.find((w) => w.address === address);
-          if (watch) return watchLabel(watch);
-        }
-        return address;
-      };
-      const quiet = isQuietTime(prefs, now());
-      const alerts: TxGroup[] = [];
-      const others: TxGroup[] = [];
-
-      for (const group of chatGroups.values()) {
-        if (group.importance === 'alert') {
-          alerts.push(group);
-          continue;
-        }
-        if (
-          prefs.mode === 'digest' &&
-          group.importance === 'incoming' &&
-          digest
-        ) {
-          const usd = group.items.reduce(
-            (sum, item) => sum + (activityUsd(item, data) ?? 0),
-            0,
-          );
-          try {
-            for (const watch of group.watches) {
-              await digest.record(chatId, {
-                address: watch.address,
-                chain,
-                hash: group.hash,
-                ...(usd > 0 ? { usd } : {}),
-                at: now(),
-              });
-            }
-            continue;
-          } catch (error) {
-            // Better a message now than a lost transaction or a repeated block
-            log?.warn(
-              { err: error, chatId },
-              'digest entry not saved, sending it',
-            );
+      // Messages, buttons and summaries in the chat's own language
+      await withLanguage(prefs.language, async () => {
+        const label = (address: Address) => {
+          for (const group of chatGroups.values()) {
+            const watch = group.watches.find((w) => w.address === address);
+            if (watch) return watchLabel(watch);
           }
+          return address;
+        };
+        const quiet = isQuietTime(prefs, now());
+        const alerts: TxGroup[] = [];
+        const others: TxGroup[] = [];
+
+        for (const group of chatGroups.values()) {
+          if (group.importance === 'alert') {
+            alerts.push(group);
+            continue;
+          }
+          if (
+            prefs.mode === 'digest' &&
+            group.importance === 'incoming' &&
+            digest
+          ) {
+            const usd = group.items.reduce(
+              (sum, item) => sum + (activityUsd(item, data) ?? 0),
+              0,
+            );
+            try {
+              for (const watch of group.watches) {
+                await digest.record(chatId, {
+                  address: watch.address,
+                  chain,
+                  hash: group.hash,
+                  ...(usd > 0 ? { usd } : {}),
+                  at: now(),
+                });
+              }
+              continue;
+            } catch (error) {
+              // Better a message now than a lost transaction or a repeated block
+              log?.warn(
+                { err: error, chatId },
+                'digest entry not saved, sending it',
+              );
+            }
+          }
+          others.push(group);
         }
-        others.push(group);
-      }
 
-      const message = (group: TxGroup) =>
-        formatTx(chain, block.number, group, data, label, {
-          hideDetails: prefs.details === 'hidden',
-          timeZone: prefs.timeZone,
-          blockTime: block.timestamp,
+        const message = (group: TxGroup) =>
+          formatTx(chain, block.number, group, data, label, {
+            hideDetails: prefs.details === 'hidden',
+            timeZone: prefs.timeZone,
+            blockTime: block.timestamp,
+          });
+        const options = (group: TxGroup, silent: boolean) => ({
+          replyMarkup: muteKeyboard(group.watches),
+          silent,
         });
-      const options = (group: TxGroup, silent: boolean) => ({
-        replyMarkup: muteKeyboard(group.watches),
-        silent,
+
+        // Every alert rings, whatever the settings; the limit only stops forged floods
+        for (const group of alerts.slice(0, MAX_ALERTS_PER_BLOCK)) {
+          await send(chatId, message(group), options(group, false));
+          onSent?.(chain, group.importance);
+        }
+        if (alerts.length > MAX_ALERTS_PER_BLOCK) {
+          await send(
+            chatId,
+            t.moreAlerts(
+              alerts.length - MAX_ALERTS_PER_BLOCK,
+              formatBlock(block.number),
+              CHAINS[chain].title,
+            ),
+            {},
+          );
+        }
+
+        for (const group of others.slice(0, MAX_MESSAGES_PER_BLOCK)) {
+          await send(chatId, message(group), options(group, quiet));
+          onSent?.(chain, group.importance);
+        }
+        if (others.length > MAX_MESSAGES_PER_BLOCK) {
+          await send(
+            chatId,
+            t.moreTransactions(
+              others.length - MAX_MESSAGES_PER_BLOCK,
+              formatBlock(block.number),
+              CHAINS[chain].title,
+            ),
+            { silent: true },
+          );
+        }
       });
-
-      // Every alert rings, whatever the settings; the limit only stops forged floods
-      for (const group of alerts.slice(0, MAX_ALERTS_PER_BLOCK)) {
-        await send(chatId, message(group), options(group, false));
-        onSent?.(chain, group.importance);
-      }
-      if (alerts.length > MAX_ALERTS_PER_BLOCK) {
-        await send(
-          chatId,
-          t.moreAlerts(
-            alerts.length - MAX_ALERTS_PER_BLOCK,
-            formatBlock(block.number),
-            CHAINS[chain].title,
-          ),
-          {},
-        );
-      }
-
-      for (const group of others.slice(0, MAX_MESSAGES_PER_BLOCK)) {
-        await send(chatId, message(group), options(group, quiet));
-        onSent?.(chain, group.importance);
-      }
-      if (others.length > MAX_MESSAGES_PER_BLOCK) {
-        await send(
-          chatId,
-          t.moreTransactions(
-            others.length - MAX_MESSAGES_PER_BLOCK,
-            formatBlock(block.number),
-            CHAINS[chain].title,
-          ),
-          { silent: true },
-        );
-      }
     }
     // The notifier unsubscribes chats that blocked the bot and follows migrated groups
     if (undelivered) await watches.load();

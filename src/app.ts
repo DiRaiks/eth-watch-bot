@@ -19,7 +19,7 @@ import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
 import { createMetrics } from './metrics.js';
-import { setLanguage, t } from './i18n/index.js';
+import { languageOf, setLanguage, t, withLanguage } from './i18n/index.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
 import { priceLookup, type PriceLookup } from './enrich/prices.js';
 import { signatureLookup, type SignatureLookup } from './enrich/signatures.js';
@@ -116,13 +116,28 @@ export const buildApp = async (options: AppOptions) => {
     // Another chat id means the group became a supergroup: the caller reloads its index
     return sent !== null && sent.chatId === chatId;
   };
-  const broadcast = async (message: Html) => {
+  // Each subscribed chat in its own language: the text is built once per language
+  const broadcast = async (format: () => Html) => {
     if (!telegram) {
-      app.log.info({ message: message.value }, 'message broadcast');
+      app.log.info({ message: format().value }, 'message broadcast');
       return;
     }
     try {
-      await app.notifier.notify(MESSAGES_TOPIC, message);
+      const texts = new Map<string, Html>();
+      const textFor = (chatId: number) => {
+        const language = watches.prefs(chatId).language;
+        let text = texts.get(language ?? '');
+        if (!text) {
+          text = withLanguage(language, format);
+          texts.set(language ?? '', text);
+        }
+        return text;
+      };
+      const chats = await app.subscriptions.listByTopic(MESSAGES_TOPIC);
+      // The notifier's queue keeps Telegram's limits; it also drops chats that blocked the bot
+      await Promise.all(
+        chats.map(({ chatId }) => app.notifier.send(chatId, textFor(chatId))),
+      );
     } catch (error) {
       // The message is stored already; a retry of the block would not post it again
       app.log.error({ err: error }, 'message broadcast failed');
@@ -134,6 +149,16 @@ export const buildApp = async (options: AppOptions) => {
     now: options.now,
   });
   await watches.load();
+
+  // Replies in the chat's language: the one chosen in /settings, else the user's
+  // Telegram language. Before the bot's own commands, which come below.
+  app.tg.bot.use((ctx, next) =>
+    withLanguage(
+      (ctx.chat && watches.prefs(ctx.chat.id).language) ??
+        languageOf(ctx.from?.language_code),
+      next,
+    ),
+  );
 
   const defaultChain = config.chains[0]!.name;
   const digest = new DigestService({
