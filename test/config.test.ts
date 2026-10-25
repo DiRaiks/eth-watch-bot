@@ -22,7 +22,13 @@ describe('loadConfig', () => {
       maxLagBlocks: 1000,
       maxWatchesPerChat: 20,
       bootstrap: { addresses: [], messages: false },
+      language: 'en',
     });
+  });
+
+  it('speaks the language from LANGUAGE', () => {
+    expect(loadConfig({ ...base, LANGUAGE: 'RU' }).language).toBe('ru');
+    expect(loadConfig({ ...base, LANGUAGE: 'en' }).language).toBe('en');
   });
 
   it('accepts the old single RPC_URL for Ethereum', () => {
@@ -100,6 +106,7 @@ describe('loadConfig', () => {
       /POLL_INTERVAL_MS must be an integer >= 500/,
     ],
     [{ ...base, BOT_ADMINS: 'me' }, /BOT_ADMINS must be a numeric/],
+    [{ ...base, LANGUAGE: 'de' }, /LANGUAGE must be en or ru/],
     [
       { ...base, DEFAULT_CHANNEL_MESSAGES: 'maybe' },
       /DEFAULT_CHANNEL_MESSAGES/,

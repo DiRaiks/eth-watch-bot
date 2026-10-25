@@ -1,4 +1,5 @@
 import { CHAIN_NAMES, CHAINS, isChainName, type ChainName } from './chains.js';
+import { isLanguage, LANGUAGES, type Language } from './i18n/index.js';
 
 export type ChainConfig = {
   name: ChainName;
@@ -34,6 +35,8 @@ export type Config = {
   signatureLookup: boolean;
   /** Show USD amounts, with prices from DefiLlama */
   prices: boolean;
+  /** Language of the bot's messages */
+  language: Language;
   /** Optional chat set up on start, e.g. the channel of the old bots */
   bootstrap: {
     chatId?: number;
@@ -131,6 +134,13 @@ export const loadConfig = (env: Env): Config => {
     return name;
   });
 
+  const language = text(env, 'LANGUAGE')?.toLowerCase() ?? 'en';
+  if (!isLanguage(language)) {
+    throw new ConfigError(
+      `LANGUAGE must be ${LANGUAGES.join(' or ')}, got "${language}"`,
+    );
+  }
+
   const token = text(env, 'BOT_TOKEN');
   const mode = text(env, 'BOT_MODE') ?? 'polling';
   if (mode !== 'polling' && mode !== 'webhook') {
@@ -171,6 +181,7 @@ export const loadConfig = (env: Env): Config => {
     maxWatchesPerChat: integer(env, 'MAX_WATCHES_PER_CHAT', 20, { min: 1 }),
     signatureLookup: boolean(env, 'SIGNATURE_LOOKUP', true),
     prices: boolean(env, 'PRICES', true),
+    language,
     bootstrap: {
       chatId: bootstrapChat
         ? chatId(bootstrapChat, 'DEFAULT_CHANNEL_ID')

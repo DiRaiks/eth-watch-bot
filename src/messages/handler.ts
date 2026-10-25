@@ -3,6 +3,7 @@ import type { Address, Hash } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
 import { addressLink, formatBlock, truncate, txLink } from '../format.js';
+import { t } from '../i18n/index.js';
 import type { BlockHandler } from '../scanner/types.js';
 import { decodeMessage } from './decode.js';
 
@@ -32,11 +33,14 @@ export interface MessageStore {
 /** `recipients` above 1 means the sender mailed the same text to several addresses in the block */
 export const formatMessage = (message: BlockMessage, recipients = 1) =>
   joinHtml([
-    html`✉️ <b>Сообщение в блоке ${formatBlock(message.blockNumber)}</b> · ${CHAINS[message.chain].title}`,
+    t.messageTitle(
+      formatBlock(message.blockNumber),
+      CHAINS[message.chain].title,
+    ),
     html`<blockquote expandable>${truncate(message.text, MAX_SHOWN)}</blockquote>`,
     html`${addressLink(message.chain, message.from)}${
       recipients > 1
-        ? html` → ${recipients} адресам`
+        ? t.toAddresses(recipients)
         : message.to
           ? html` → ${addressLink(message.chain, message.to)}`
           : ''
@@ -93,7 +97,7 @@ export const blockMessagesHandler = ({
     const rest = fresh.length - MAX_POSTS_PER_BLOCK;
     if (rest > 0) {
       await broadcast(
-        html`…и ещё ${rest} сообщений в блоке ${formatBlock(block.number)} (${CHAINS[chain].title}): /v1/messages`,
+        t.moreMessages(rest, formatBlock(block.number), CHAINS[chain].title),
       );
     }
   },

@@ -5,6 +5,7 @@ import { addressUrl, CHAINS, type ChainName } from '../chains.js';
 import { callAmount, decodeCall, type CallArg } from '../enrich/calldata.js';
 import type { MethodName } from '../enrich/signatures.js';
 import { RISKY_METHODS } from '../enrich/signatures.js';
+import { t } from '../i18n/index.js';
 import { usdValue } from '../enrich/prices.js';
 import {
   addressLink,
@@ -70,7 +71,7 @@ const tokenAmount = (
   const decimals = data.tokens.get(token)?.decimals;
   const amount =
     decimals === null || decimals === undefined
-      ? `${value.toString()} ед.`
+      ? `${value.toString()} ${t.units}`
       : formatAmount(value, decimals);
   return html`<b>${amount}</b> ${tokenLink(chain, token, data)}`;
 };
@@ -113,7 +114,7 @@ const argValue = (
   // viem decodes integers of up to 48 bits as numbers
   const value = typeof arg.value === 'number' ? BigInt(arg.value) : arg.value;
   if (type.endsWith(']')) {
-    return Array.isArray(value) ? `[${value.length} шт.]` : '[…]';
+    return Array.isArray(value) ? t.items(value.length) : '[…]';
   }
   if (type === 'tuple') {
     return arg.components ? argList(chain, arg.components, data, null) : '(…)';
@@ -124,7 +125,7 @@ const argValue = (
       ? tokenLink(chain, value as Address, data)
       : addressLink(chain, value);
   }
-  if (type === 'bool') return value ? 'да' : 'нет';
+  if (type === 'bool') return value ? t.yes : t.no;
   if (type === 'string' && typeof value === 'string') {
     return `«${truncate(value.replace(INVISIBLE, ' '), 24)}»`;
   }
@@ -138,7 +139,7 @@ const argValue = (
       (amountOf || AMOUNT_PARAMS.test(arg.name ?? '')) &&
       isMax(type, value)
     ) {
-      return html`<b>все</b>`;
+      return html`<b>${t.all}</b>`;
     }
     if (token && token.decimals !== null) {
       return `${formatAmount(value, token.decimals)} ${token.symbol}`.trim();
@@ -147,7 +148,7 @@ const argValue = (
   }
   if (typeof value === 'string' && value.startsWith('0x')) {
     return value.length > 18
-      ? `${value.slice(0, 10)}… (${(value.length - 2) / 2} байт)`
+      ? t.bytes(value.slice(0, 10), (value.length - 2) / 2)
       : value;
   }
   return '…';
@@ -182,7 +183,7 @@ const methodText = (
 ) => {
   if (!selector || selector === '0x') return '';
   const method = data.methods.get(selector);
-  if (!method) return html` · метод <code>${selector}</code>`;
+  if (!method) return t.method(selector);
   const args =
     method.signature &&
     decodeCall(method.signature, input, { named: method.trusted });
@@ -191,7 +192,7 @@ const methodText = (
     : '';
   if (!method.trusted) {
     // Anyone can register a name for a selector: show it as a hint only
-    return html` · метод <code>${selector}</code> (похоже на ${method.name}${params})`;
+    return t.methodHint(selector, method.name, params);
   }
   const risky = RISKY_METHODS.has(method.name) ? '⚠️ ' : '';
   return html` · ${risky}<b>${method.name}</b>${params}`;
@@ -205,7 +206,7 @@ const nftIds = (tokenIds: bigint[], amounts: bigint[] | null) => {
       : `#${id}`;
   });
   return tokenIds.length > 3
-    ? `${shown.join(', ')} и ещё ${tokenIds.length - 3}`
+    ? `${shown.join(', ')} ${t.andMore(tokenIds.length - 3)}`
     : shown.join(', ');
 };
 
@@ -218,7 +219,7 @@ export const activityLine = (
   const line = describe(chain, activity, data);
   if (activity.spam !== 'fake-token') return line;
   // An alarming event from a token the address never held: say so instead of alarming
-  return html`${raw(line.value.replace(/^🚨/u, '⚠️'))} · ⚠️ у вас нет этого токена, похоже на подделку: ничего не пропало`;
+  return html`${raw(line.value.replace(/^🚨/u, '⚠️'))}${t.fakeTokenNote}`;
 };
 
 const describe = (
@@ -232,15 +233,45 @@ const describe = (
 
   switch (activity.kind) {
     case 'create':
-      return html`🧱 Создание контракта`;
+      return t.created;
     case 'send-native':
-      return html`⬆️ Отправлено ${withUsd(html`<b>${formatAmount(activity.value, 18)} ${native}</b>`, usd)} → ${link(activity.to)}`;
+      return t.sent(
+        withUsd(
+          html`<b>${formatAmount(activity.value, 18)} ${native}</b>`,
+          usd,
+        ),
+        link(activity.to),
+      );
     case 'receive-native':
-      return html`⬇️ Получено ${withUsd(html`<b>${formatAmount(activity.value, 18)} ${native}</b>`, usd)} от ${link(activity.from)}`;
+      return t.received(
+        withUsd(
+          html`<b>${formatAmount(activity.value, 18)} ${native}</b>`,
+          usd,
+        ),
+        link(activity.from),
+      );
     case 'call':
-      return html`⚙️ Вызов ${link(activity.contract)}${methodText(chain, activity.selector, activity.input, activity.contract, data)}`;
+      return t.call(
+        link(activity.contract),
+        methodText(
+          chain,
+          activity.selector,
+          activity.input,
+          activity.contract,
+          data,
+        ),
+      );
     case 'called':
-      return html`⚙️ Вызов от ${link(activity.caller)}${methodText(chain, activity.selector, activity.input, activity.address, data)}`;
+      return t.calledBy(
+        link(activity.caller),
+        methodText(
+          chain,
+          activity.selector,
+          activity.input,
+          activity.address,
+          data,
+        ),
+      );
 
     case 'send-token': {
       const amount = withUsd(
@@ -248,12 +279,12 @@ const describe = (
         usd,
       );
       if (activity.spam === 'fake-transfer') {
-        return html`⚠️ Поддельный перевод ${amount} → ${link(activity.to)} от вашего имени. Это address poisoning: не копируйте адрес получателя из истории`;
+        return t.fakeTransfer(amount, link(activity.to));
       }
       if (activity.sentBy) {
-        return html`🚨 Списано ${amount} → ${link(activity.to)}, транзакцию отправил ${link(activity.sentBy)}`;
+        return t.taken(amount, link(activity.to), link(activity.sentBy));
       }
-      return html`⬆️ Отправлено ${amount} → ${link(activity.to)}`;
+      return t.sent(amount, link(activity.to));
     }
     case 'receive-token': {
       const amount = withUsd(
@@ -262,42 +293,62 @@ const describe = (
       );
       const note =
         activity.spam === 'fake-transfer'
-          ? ' · ⚠️ нулевой перевод, похоже на спам'
+          ? t.zeroTransferNote
           : activity.spam === 'unpriced'
-            ? ' · ⚠️ токен без цены, возможно спам'
+            ? t.unpricedNote
             : '';
-      return html`⬇️ Получено ${amount} от ${link(activity.from)}${note}`;
+      return html`${t.received(amount, link(activity.from))}${note}`;
     }
 
     case 'send-nft': {
       const what = html`NFT ${tokenLink(chain, activity.token, data)} ${nftIds(activity.tokenIds, activity.amounts)}`;
       return activity.sentBy
-        ? html`🚨 Списан ${what} → ${link(activity.to)}, транзакцию отправил ${link(activity.sentBy)}`
-        : html`🖼 Отправлен ${what} → ${link(activity.to)}`;
+        ? t.nftTaken(what, link(activity.to), link(activity.sentBy))
+        : t.nftSent(what, link(activity.to));
     }
     case 'receive-nft':
-      return html`🖼 Получен NFT ${tokenLink(chain, activity.token, data)} ${nftIds(activity.tokenIds, activity.amounts)} от ${link(activity.from)}`;
+      return t.nftReceived(
+        html`NFT ${tokenLink(chain, activity.token, data)} ${nftIds(activity.tokenIds, activity.amounts)}`,
+        link(activity.from),
+      );
 
     case 'approval': {
       const token = tokenLink(chain, activity.token, data);
       if (activity.value === 0n) {
-        return html`✅ Разрешение на ${token} для ${link(activity.spender)} отозвано`;
+        return t.approvalRevoked(token, link(activity.spender));
       }
       const via = activity.permit2
-        ? html` через Permit2 до ${formatTime(activity.permit2.expiration * 1000)}`
+        ? t.viaPermit2(formatTime(activity.permit2.expiration * 1000))
         : '';
       return activity.unlimited
-        ? html`🚨 Разрешение${via}: ${link(activity.spender)} может тратить <b>все</b> ваши ${token}`
-        : html`⚠️ Разрешение${via}: ${link(activity.spender)} может тратить ${tokenAmount(chain, activity.token, activity.value, data)}`;
+        ? t.approvalAll(via, link(activity.spender), token)
+        : t.approvalAmount(
+            via,
+            link(activity.spender),
+            tokenAmount(chain, activity.token, activity.value, data),
+          );
     }
     case 'nft-approval':
       return activity.importance === 'alert'
-        ? html`⚠️ Разрешение: ${link(activity.spender)} может забрать NFT ${tokenLink(chain, activity.token, data)} #${activity.tokenId}`
-        : html`✅ Разрешение на NFT ${tokenLink(chain, activity.token, data)} #${activity.tokenId} снято`;
+        ? t.nftApproval(
+            link(activity.spender),
+            tokenLink(chain, activity.token, data),
+            activity.tokenId,
+          )
+        : t.nftApprovalCleared(
+            tokenLink(chain, activity.token, data),
+            activity.tokenId,
+          );
     case 'approval-for-all':
       return activity.approved
-        ? html`🚨 Разрешение: ${link(activity.operator)} может забрать <b>все</b> NFT коллекции ${tokenLink(chain, activity.token, data)}`
-        : html`✅ Разрешение на коллекцию ${tokenLink(chain, activity.token, data)} для ${link(activity.operator)} отозвано`;
+        ? t.approvalForAll(
+            link(activity.operator),
+            tokenLink(chain, activity.token, data),
+          )
+        : t.approvalForAllRevoked(
+            tokenLink(chain, activity.token, data),
+            link(activity.operator),
+          );
   }
 };
 
@@ -338,11 +389,9 @@ export const formatTx = (
     joinHtml([
       html`${icon} <b>${title}</b> · ${CHAINS[chain].title}`,
       ...lines.slice(0, shown),
-      shown < lines.length &&
-        html`…и ещё ${lines.length - shown} в этой транзакции`,
-      group.importance === 'alert' &&
-        html`<i>Если это были не вы: отзовите разрешения (revoke.cash) и выведите средства на новый кошелёк.</i>`,
-      html`${txLink(chain, group.hash)} · блок ${formatBlock(blockNumber)}`,
+      shown < lines.length && t.moreInTx(lines.length - shown),
+      group.importance === 'alert' && t.advice,
+      t.block(txLink(chain, group.hash), formatBlock(blockNumber)),
     ]);
 
   let shown = Math.min(lines.length, MAX_LINES);

@@ -1,4 +1,4 @@
-import { html, type Html, type SendOptions } from '@dirai/tg-kit';
+import type { Html, SendOptions } from '@dirai/tg-kit';
 import type { FastifyBaseLogger } from 'fastify';
 import { InlineKeyboard } from 'grammy';
 import type { Address, Hex } from 'viem';
@@ -8,6 +8,7 @@ import { callToken } from '../enrich/calldata.js';
 import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
+import { t } from '../i18n/index.js';
 import type { BlockHandler, ChainReader, TokenInfo } from '../scanner/types.js';
 import { collectActivity, mostImportant, type Activity } from './activity.js';
 import type { DigestService } from './digest.js';
@@ -47,15 +48,12 @@ export const muteKeyboard = (watches: Watch[]) => {
   const keyboard = new InlineKeyboard();
   const [single] = watches;
   if (watches.length === 1 && single) {
-    return keyboard.text(
-      `🔕 Заглушить на ${MUTE_HOURS} ч`,
-      `mute:${single.address}`,
-    );
+    return keyboard.text(t.mute(MUTE_HOURS), `mute:${single.address}`);
   }
   watches.slice(0, 3).forEach((watch, index) => {
     if (index > 0) keyboard.row();
     keyboard.text(
-      `🔕 ${watchLabel(watch)} на ${MUTE_HOURS} ч`,
+      t.muteAddress(watchLabel(watch), MUTE_HOURS),
       `mute:${watch.address}`,
     );
   });
@@ -419,7 +417,11 @@ export const addressWatchHandler = ({
       if (alerts.length > MAX_ALERTS_PER_BLOCK) {
         await send(
           chatId,
-          html`🚨 …и ещё ${alerts.length - MAX_ALERTS_PER_BLOCK} тревог в блоке ${formatBlock(block.number)} (${CHAINS[chain].title}). Проверьте адреса в эксплорере.`,
+          t.moreAlerts(
+            alerts.length - MAX_ALERTS_PER_BLOCK,
+            formatBlock(block.number),
+            CHAINS[chain].title,
+          ),
           {},
         );
       }
@@ -430,7 +432,11 @@ export const addressWatchHandler = ({
       if (others.length > MAX_MESSAGES_PER_BLOCK) {
         await send(
           chatId,
-          html`…и ещё ${others.length - MAX_MESSAGES_PER_BLOCK} транзакций в блоке ${formatBlock(block.number)} (${CHAINS[chain].title})`,
+          t.moreTransactions(
+            others.length - MAX_MESSAGES_PER_BLOCK,
+            formatBlock(block.number),
+            CHAINS[chain].title,
+          ),
           { silent: true },
         );
       }

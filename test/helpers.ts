@@ -183,6 +183,7 @@ export const testConfig = (overrides: Partial<Config> = {}): Config => ({
   maxWatchesPerChat: 20,
   signatureLookup: false,
   prices: false,
+  language: 'ru',
   bootstrap: { addresses: [], messages: false },
   ...overrides,
 });

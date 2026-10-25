@@ -17,6 +17,7 @@ import { CHAINS, type ChainName } from './chains.js';
 import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
+import { setLanguage, t } from './i18n/index.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
 import { priceLookup, type PriceLookup } from './enrich/prices.js';
 import { signatureLookup, type SignatureLookup } from './enrich/signatures.js';
@@ -47,17 +48,9 @@ export type AppOptions = {
   now?: () => number;
 };
 
-const START_TEXT = (chains: string) =>
-  [
-    `Привет! Я слежу за адресами в ${chains}: переводы ETH, токенов и NFT, вызовы контрактов и разрешения на токены.`,
-    'Добавьте свои кошельки, и вы узнаете о любой транзакции, которую не делали.',
-    '',
-    'Добавить адрес: /watch 0x… или /watch vitalik.eth',
-    'Настройки: /settings · Все команды: /help',
-  ].join('\n');
-
 export const buildApp = async (options: AppOptions) => {
   const { config, stores } = options;
+  setLanguage(config.language);
   const app = Fastify({
     logger: options.logger ?? { level: config.logLevel },
     // Trust X-Forwarded-For only from the configured number of proxy hops
@@ -85,7 +78,11 @@ export const buildApp = async (options: AppOptions) => {
     mode: telegram ? config.bot.mode : 'none',
     webhook: config.bot.webhook,
     admins: config.bot.admins,
-    texts: { start: START_TEXT(chainTitles) },
+    texts: {
+      start: t.start(chainTitles),
+      helpTitle: t.helpTitle,
+      forbidden: t.forbidden,
+    },
     ...options.bot,
   });
   // The kit's /subscribe and /unsubscribe are replaced by /messages: without a topic
