@@ -5,6 +5,7 @@ import type { Address, Hash, Hex } from 'viem';
 
 import { CHAINS, type ChainName } from '../chains.js';
 import { callToken } from '../enrich/calldata.js';
+import { looksLike } from '../enrich/lookalike.js';
 import type { PriceLookup } from '../enrich/prices.js';
 import type { MethodName, SignatureLookup } from '../enrich/signatures.js';
 import { formatBlock } from '../format.js';
@@ -219,6 +220,23 @@ export type ContactPair = { hash: Hash; owner: Address; counterparty: Address };
  * itself: anyone can emit an Approval or Transfer naming the address, and a forged one
  * must not make a look-alike "known".
  */
+/** Anyone the address seems to deal with, also in forged events: poisoning's targets */
+const anyCounterpartyOf = (item: Activity): Address | null => {
+  switch (item.kind) {
+    case 'send-native':
+    case 'send-token':
+    case 'send-nft':
+      return item.to;
+    case 'approval':
+    case 'nft-approval':
+      return item.spender;
+    case 'approval-for-all':
+      return item.operator;
+    default:
+      return null;
+  }
+};
+
 const counterpartyOf = (item: Activity): Address | null => {
   switch (item.kind) {
     case 'send-native':
@@ -246,8 +264,13 @@ const gatherFacts = async (
   reader: ChainReader,
   blockNumber: number,
   contacts: ContactStore | undefined,
+  /** Watched addresses, lowercase: the owner's own wallets are imitated too */
+  watched: () => string[],
 ): Promise<
-  Pick<Enrichment, 'receipts' | 'balances' | 'contracts' | 'newContacts'> & {
+  Pick<
+    Enrichment,
+    'receipts' | 'balances' | 'contracts' | 'newContacts' | 'lookalikes'
+  > & {
     contactPairs: ContactPair[];
   }
 > => {
@@ -291,37 +314,61 @@ const gatherFacts = async (
         )
       : Promise.resolve(null);
 
-  const [receipts, balances, contracts, newContacts] = await Promise.all([
-    Promise.all(
-      hashes.map(
-        async (hash) =>
-          [hash, await settle(reader.getReceipt?.(hash))] as const,
+  // A counterparty that shows like a watched address or a known contact, yet is another
+  const suspects = items
+    .flatMap((item) => {
+      const counterparty = anyCounterpartyOf(item);
+      return counterparty ? [{ owner: item.address, counterparty }] : [];
+    })
+    .slice(0, MAX_COUNTERPARTIES);
+  const lookalike = async ({
+    owner,
+    counterparty,
+  }: {
+    owner: Address;
+    counterparty: Address;
+  }) => {
+    const own = watched().find((address) => looksLike(address, counterparty));
+    const original =
+      own ?? (await settle(contacts?.similar(owner, counterparty)));
+    return original
+      ? ([counterparty.toLowerCase(), original as Address] as const)
+      : null;
+  };
+
+  const [receipts, balances, contracts, newContacts, imitations] =
+    await Promise.all([
+      Promise.all(
+        hashes.map(
+          async (hash) =>
+            [hash, await settle(reader.getReceipt?.(hash))] as const,
+        ),
       ),
-    ),
-    Promise.all(
-      holders.map(
-        async (address) =>
-          [
-            address,
-            await settle(reader.getBalance?.(address, blockNumber)),
-          ] as const,
+      Promise.all(
+        holders.map(
+          async (address) =>
+            [
+              address,
+              await settle(reader.getBalance?.(address, blockNumber)),
+            ] as const,
+        ),
       ),
-    ),
-    Promise.all(
-      counterparties.map(
-        async (address) =>
-          [address, await settle(reader.isContract?.(address))] as const,
+      Promise.all(
+        counterparties.map(
+          async (address) =>
+            [address, await settle(reader.isContract?.(address))] as const,
+        ),
       ),
-    ),
-    Promise.all(
-      pairs.map(async ({ owner, counterparty }) =>
-        // Unknown when the store did not answer: then no note rather than a wrong one
-        (await settle(contacts?.isKnown(owner, counterparty))) === false
-          ? `${owner.toLowerCase()}:${counterparty.toLowerCase()}`
-          : null,
+      Promise.all(
+        pairs.map(async ({ owner, counterparty }) =>
+          // Unknown when the store did not answer: then no note rather than a wrong one
+          (await settle(contacts?.isKnown(owner, counterparty))) === false
+            ? `${owner.toLowerCase()}:${counterparty.toLowerCase()}`
+            : null,
+        ),
       ),
-    ),
-  ]);
+      Promise.all(suspects.map(lookalike)),
+    ]);
 
   const known = <K, V>(entries: (readonly [K, V | null])[]) =>
     new Map(
@@ -336,6 +383,7 @@ const gatherFacts = async (
     contracts: lowercaseKeys(known<Address, boolean>(contracts)),
     newContacts: new Set(newContacts.filter((pair) => pair !== null)),
     contactPairs: pairs,
+    lookalikes: new Map(imitations.filter((entry) => entry !== null)),
   };
 };
 
@@ -478,6 +526,25 @@ export const addressWatchHandler = ({
       }
     }
 
+    // A symbol that imitates a popular ticker with look-alike letters is a fake token,
+    // whatever its contract answers: its alerts are forgeries, its gifts spam
+    for (const item of activity) {
+      const token = tokenOf(item);
+      if (
+        !token ||
+        data.prices.has(token) ||
+        !data.tokens.get(token)?.imitates
+      ) {
+        continue;
+      }
+      if (item.importance === 'alert') {
+        item.importance = 'outgoing';
+        item.spam = 'fake-token';
+      } else if (item.kind === 'receive-token' && !item.spam) {
+        item.spam = 'unpriced';
+      }
+    }
+
     // Alerts about tokens the owner does not hold are forgeries: anyone can emit the events
     const unverified = activity
       .filter((item) => {
@@ -545,6 +612,7 @@ export const addressWatchHandler = ({
       reader,
       block.number,
       contacts,
+      () => watches.addresses(),
     );
     Object.assign(data, facts);
 

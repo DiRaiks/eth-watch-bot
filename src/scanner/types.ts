@@ -20,7 +20,12 @@ export type ScannedBlock = {
   transactions: ScannedTransaction[];
 };
 
-export type TokenInfo = { symbol: string; decimals: number | null };
+export type TokenInfo = {
+  symbol: string;
+  decimals: number | null;
+  /** The popular ticker the symbol imitates with look-alike letters, e.g. USDC */
+  imitates?: string;
+};
 
 /** What a transaction cost and whether it went through */
 export type TxReceipt = {

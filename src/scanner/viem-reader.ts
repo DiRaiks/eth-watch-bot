@@ -1,4 +1,7 @@
 import {
+  BaseError,
+  ContractFunctionRevertedError,
+  ContractFunctionZeroDataError,
   erc20Abi,
   hexToNumber,
   parseAbi,
@@ -7,6 +10,7 @@ import {
   type PublicClient,
 } from 'viem';
 
+import { imitatedTicker } from '../enrich/lookalike.js';
 import { decodeTokenLog, mayConcern, TOKEN_TOPICS } from './token-logs.js';
 import type { ChainReader, TokenInfo, TxReceipt } from './types.js';
 
@@ -56,6 +60,10 @@ export const viemReader = (
     return {
       // Old tokens with bytes32 symbols and unsafe symbols show up as the address
       symbol: symbol.status === 'fulfilled' ? safeSymbol(symbol.value) : '',
+      ...(symbol.status === 'fulfilled' &&
+        imitatedTicker(symbol.value) && {
+          imitates: imitatedTicker(symbol.value)!,
+        }),
       decimals: decimals.status === 'fulfilled' ? decimals.value : null,
       complete:
         symbol.status === 'fulfilled' && decimals.status === 'fulfilled',
@@ -148,8 +156,18 @@ export const viemReader = (
               args: [owner, tokenId],
               blockNumber: BigInt(blockNumber),
             });
-      } catch {
-        return null;
+      } catch (error) {
+        // A real token always answers balanceOf. One that reverts or returns nothing for
+        // the owner holds nothing of it: fake tokens fail it on purpose, so that their
+        // forged Transfer events look real. Network errors stay unknown.
+        const refused =
+          error instanceof BaseError &&
+          error.walk(
+            (cause) =>
+              cause instanceof ContractFunctionRevertedError ||
+              cause instanceof ContractFunctionZeroDataError,
+          ) !== null;
+        return refused ? 0n : null;
       }
     },
 

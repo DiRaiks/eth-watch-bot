@@ -174,6 +174,14 @@ describe('contact stores', () => {
         ),
       ).toBe(false);
       expect(await store.remember(BOB, ALICE)).toBe(true);
+      // A look-alike of a known counterparty: same first and last four characters
+      const lookalike =
+        '0x0000aaaa219ab540356cbb839cbe05303d7705fa' as typeof BOB;
+      expect((await store.similar(ALICE, lookalike))?.toLowerCase()).toBe(
+        BOB.toLowerCase(),
+      );
+      expect(await store.similar(ALICE, BOB)).toBeNull();
+      expect(await store.similar(BOB, lookalike)).toBeNull();
     }
     await db.close();
   });
