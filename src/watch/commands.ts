@@ -6,7 +6,7 @@ import type { Address } from 'viem';
 
 import { addressLink, formatTime, replyHtml, truncate } from '../format.js';
 import type { ChainName } from '../chains.js';
-import { languageOf, t } from '../i18n/index.js';
+import { languageOf, t, translations } from '../i18n/index.js';
 import { MUTE_HOURS, watchLabel } from './handler.js';
 import { normalizeAddress, type WatchService } from './watch-service.js';
 
@@ -69,7 +69,7 @@ export const registerWatchCommands = (
 
   app.tg.command({
     command: 'watch',
-    description: t.watchCommand,
+    description: translations((texts) => texts.watchCommand),
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const [input, ...labelWords] = String(ctx.match ?? '')
@@ -120,7 +120,7 @@ export const registerWatchCommands = (
 
   app.tg.command({
     command: 'unwatch',
-    description: t.unwatchCommand,
+    description: translations((texts) => texts.unwatchCommand),
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const input = String(ctx.match ?? '').trim();
@@ -135,7 +135,7 @@ export const registerWatchCommands = (
 
   app.tg.command({
     command: 'list',
-    description: t.listCommand,
+    description: translations((texts) => texts.listCommand),
     handler: async (ctx) => {
       const list = await watches.list(ctx.chat!.id);
       if (!list.length) {

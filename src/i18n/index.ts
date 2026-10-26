@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { Translations } from '@dirai/tg-kit';
 
 import { en, type Texts } from './en.js';
 import { ru } from './ru.js';
@@ -33,6 +34,16 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
 export const t: Texts = new Proxy({} as Texts, {
   get: (_target, key) => TEXTS[currentLanguage()][key as keyof Texts],
 });
+
+/**
+ * A text in every language, for the kit's replies and command menus; `default` is the
+ * bot's language (LANGUAGE) at the time of the call
+ */
+export const translations = <T>(pick: (texts: Texts) => T): Translations<T> => {
+  const all: Translations<T> = { default: pick(TEXTS[fallback]) };
+  for (const language of LANGUAGES) all[language] = pick(TEXTS[language]);
+  return all;
+};
 
 /** The bot's default language, from LANGUAGE */
 export const setLanguage = (language: Language) => {

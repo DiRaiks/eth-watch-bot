@@ -13,13 +13,19 @@ import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
 } from 'fastify';
+import type { Context } from 'grammy';
 
 import { CHAINS, type ChainName } from './chains.js';
 import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
 import { registerRoutes } from './http.js';
 import { createMetrics } from './metrics.js';
-import { languageOf, setLanguage, t, withLanguage } from './i18n/index.js';
+import {
+  languageOf,
+  setLanguage,
+  translations,
+  withLanguage,
+} from './i18n/index.js';
 import { blockMessagesHandler, MESSAGES_TOPIC } from './messages/handler.js';
 import { priceLookup, type PriceLookup } from './enrich/prices.js';
 import { signatureLookup, type SignatureLookup } from './enrich/signatures.js';
@@ -72,6 +78,17 @@ export const buildApp = async (options: AppOptions) => {
     await app.register(cors, { origin: config.corsOrigins, methods: ['GET'] });
   }
 
+  const watches = new WatchService(stores.chats, {
+    maxPerChat: config.maxWatchesPerChat,
+    now: options.now,
+  });
+  await watches.load();
+
+  // The chat's language: the one chosen in /settings, else the user's Telegram language
+  const chatLanguage = (ctx: Context) =>
+    (ctx.chat && watches.prefs(ctx.chat.id).language) ??
+    languageOf(ctx.from?.language_code);
+
   const chainTitles = config.chains
     .map(({ name }) => CHAINS[name].title)
     .join(', ');
@@ -81,12 +98,13 @@ export const buildApp = async (options: AppOptions) => {
     webhook: config.bot.webhook,
     admins: config.bot.admins,
     texts: {
-      start: t.start(chainTitles),
-      helpTitle: t.helpTitle,
-      startDescription: t.startCommand,
-      helpDescription: t.helpCommand,
-      forbidden: t.forbidden,
+      start: translations((texts) => texts.start(chainTitles)),
+      helpTitle: translations((texts) => texts.helpTitle),
+      startDescription: translations((texts) => texts.startCommand),
+      helpDescription: translations((texts) => texts.helpCommand),
+      forbidden: translations((texts) => texts.forbidden),
     },
+    language: chatLanguage,
     ...options.bot,
   });
   // The kit's /subscribe and /unsubscribe are replaced by /messages: without a topic
@@ -144,21 +162,9 @@ export const buildApp = async (options: AppOptions) => {
     }
   };
 
-  const watches = new WatchService(stores.chats, {
-    maxPerChat: config.maxWatchesPerChat,
-    now: options.now,
-  });
-  await watches.load();
-
-  // Replies in the chat's language: the one chosen in /settings, else the user's
-  // Telegram language. Before the bot's own commands, which come below.
-  app.tg.bot.use((ctx, next) =>
-    withLanguage(
-      (ctx.chat && watches.prefs(ctx.chat.id).language) ??
-        languageOf(ctx.from?.language_code),
-      next,
-    ),
-  );
+  // The bot's own replies in the chat's language; the kit's /start and /help take it
+  // from `language` above. Before the bot's own commands, which come below.
+  app.tg.bot.use((ctx, next) => withLanguage(chatLanguage(ctx), next));
 
   const defaultChain = config.chains[0]!.name;
   const digest = new DigestService({

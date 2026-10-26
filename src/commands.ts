@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { CHAINS } from './chains.js';
 import { formatBlock, replyHtml } from './format.js';
-import { t } from './i18n/index.js';
+import { t, translations } from './i18n/index.js';
 import { MESSAGES_TOPIC } from './messages/handler.js';
 import type { BlockScanner, ScannerStatus } from './scanner/scanner.js';
 import type { WatchService } from './watch/watch-service.js';
@@ -57,7 +57,7 @@ export const registerCommands = (
   if (messagesEnabled) {
     app.tg.command({
       command: 'messages',
-      description: t.messagesCommand,
+      description: translations((texts) => texts.messagesCommand),
       scope: 'chatAdmin',
       handler: async (ctx) => {
         const chatId = ctx.chat!.id;
@@ -80,7 +80,7 @@ export const registerCommands = (
 
   app.tg.command({
     command: 'status',
-    description: t.statusCommand,
+    description: translations((texts) => texts.statusCommand),
     handler: async (ctx) => {
       const chatId = ctx.chat!.id;
       const list = await watches.list(chatId);
@@ -100,7 +100,7 @@ export const registerCommands = (
 
   app.tg.command({
     command: 'health',
-    description: t.healthCommand,
+    description: translations((texts) => texts.healthCommand),
     scope: 'admin',
     handler: async (ctx) => {
       const started = performance.now();
@@ -140,7 +140,7 @@ export const registerCommands = (
 
   app.tg.command({
     command: 'stats',
-    description: t.statsCommand,
+    description: translations((texts) => texts.statsCommand),
     scope: 'admin',
     handler: async (ctx) => {
       const { addresses, chats } = watches.stats();
