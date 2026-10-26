@@ -58,7 +58,19 @@ services:
       # Postgres 18 keeps its data under /var/lib/postgresql/<version>
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'eth_watch', '-d', 'eth_watch']
+      # Over TCP: on first start the image runs a socket-only server to initialise the
+      # database, which must not count as ready
+      test:
+        [
+          'CMD',
+          'pg_isready',
+          '-h',
+          '127.0.0.1',
+          '-U',
+          'eth_watch',
+          '-d',
+          'eth_watch',
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
