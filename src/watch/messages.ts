@@ -478,8 +478,12 @@ export const formatTx = (
       html`${formatAmount(wei, 18)} ${native}`,
       nativePrice === undefined ? undefined : usdValue(wei, 18, nativePrice),
     );
+  // With several watched addresses in the transaction, say which one paid
+  const payer = items.find(paysFee);
   const paidFee =
-    receipt && items.some(paysFee) ? t.fee(amount(receipt.fee)) : null;
+    receipt && payer
+      ? t.fee(amount(receipt.fee), several ? label(payer.address) : null)
+      : null;
   const balances = group.watches.flatMap((watch) => {
     const balance = data.balances?.get(watch.address.toLowerCase() as Address);
     return balance === undefined

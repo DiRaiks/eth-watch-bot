@@ -174,7 +174,8 @@ export const en = {
     html`${link} · block ${block}${time ? ` · ${time}` : ''}`,
   eventFailed: ' · ❌ failed',
   txFailed: html`❌ <b>The transaction failed</b>: no coins or tokens moved, the fee was paid`,
-  fee: (amount: Part) => html`⛽ Fee ${amount}`,
+  fee: (amount: Part, payer?: string | null) =>
+    html`⛽ Fee${payer ? html` (${payer})` : ''} ${amount}`,
   balance: (label: string | null, amount: Part) =>
     html`💰 Balance${label ? html` ${label}` : ''}: ${amount}`,
   contractNote: ' (contract)',

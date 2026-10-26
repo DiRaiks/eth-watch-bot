@@ -143,7 +143,8 @@ export const ru: Texts = {
     html`${link} · блок ${block}${time ? ` · ${time}` : ''}`,
   eventFailed: ' · ❌ не прошла',
   txFailed: html`❌ <b>Транзакция не прошла</b>: монеты и токены не переведены, комиссия списана`,
-  fee: (amount) => html`⛽ Комиссия ${amount}`,
+  fee: (amount, payer) =>
+    html`⛽ Комиссия${payer ? html` (${payer})` : ''} ${amount}`,
   balance: (label, amount) =>
     html`💰 Баланс${label ? html` ${label}` : ''}: ${amount}`,
   contractNote: ' (контракт)',

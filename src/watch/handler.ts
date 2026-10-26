@@ -616,6 +616,38 @@ export const addressWatchHandler = ({
     );
     Object.assign(data, facts);
 
+    // ETH sent to a digest chat's address by a transaction that failed never arrived: only
+    // these few need a receipt, the rest of the digest stays free of RPC calls
+    const digestNative = [
+      ...new Set(
+        [...groups].flatMap(([chatId, chatGroups]) =>
+          [...chatGroups.values()]
+            .filter(
+              (group) =>
+                toDigest(chatId, group) &&
+                group.items.some((item) => item.kind === 'receive-native') &&
+                !data.receipts?.has(group.hash),
+            )
+            .map((group) => group.hash),
+        ),
+      ),
+    ].slice(0, MAX_RECEIPTS);
+    const digestReceipts = await Promise.all(
+      digestNative.map(async (hash) => {
+        const receipt = reader.getReceipt
+          ? await withDeadline(
+              reader.getReceipt(hash).then((value): TxReceipt | null => value),
+              FACTS_DEADLINE_MS,
+              null,
+            )
+          : null;
+        return [hash, receipt] as const;
+      }),
+    );
+    for (const [hash, receipt] of digestReceipts) {
+      if (receipt) data.receipts?.set(hash, receipt);
+    }
+
     // Counterparties become known once an alert about them reached a chat, so a failed
     // delivery and the retried block still say "first time"
     const remembered = new Set<string>();
@@ -671,6 +703,8 @@ export const addressWatchHandler = ({
             group.importance === 'incoming' &&
             digest
           ) {
+            // Nothing arrived: not worth a line in the summary
+            if (data.receipts?.get(group.hash)?.success === false) continue;
             const usd = group.items.reduce(
               (sum, item) => sum + (activityUsd(item, data) ?? 0),
               0,
