@@ -67,6 +67,18 @@ describe('what the alert tells about the transaction', () => {
     expect(text).toMatch(/блок 101 · 15\.11 01:15/);
   });
 
+  it('finds the balance and contracts whatever case the RPC returns addresses in', async () => {
+    const t = await start();
+    t.chain.setNativeBalance(ALICE, 2n * 10n ** 18n);
+    t.chain.addContract(BOB);
+    const lower = (address: string) => address.toLowerCase() as typeof ALICE;
+    const text = await mine(t, [
+      tx(1, { from: lower(ALICE), to: lower(BOB), value: 10n ** 15n }),
+    ]);
+    expect(text).toContain('💰 Баланс: 2 ETH');
+    expect(text).toContain('(контракт)');
+  });
+
   it('names known contracts, marks other contracts and first dealings', async () => {
     const t = await start();
     const first = await mine(t, [

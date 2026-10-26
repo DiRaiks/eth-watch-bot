@@ -203,6 +203,14 @@ const ownTx = (item: Activity) =>
 const sentByWatched = (item: Activity) =>
   item.kind === 'send-native' || item.kind === 'call' || item.kind === 'create';
 
+const lowercaseKeys = <V>(map: Map<Address, V>) =>
+  new Map(
+    [...map].map(([address, value]) => [
+      address.toLowerCase() as Address,
+      value,
+    ]),
+  );
+
 /** A counterparty met in a transaction; remembered once the alert is delivered */
 export type ContactPair = { hash: Hash; owner: Address; counterparty: Address };
 
@@ -323,8 +331,9 @@ const gatherFacts = async (
     );
   return {
     receipts: known<Hash, TxReceipt>(receipts),
-    balances: known<Address, bigint>(balances),
-    contracts: known<Address, boolean>(contracts),
+    // Addresses come in whatever case the RPC returns: keyed in lowercase
+    balances: lowercaseKeys(known<Address, bigint>(balances)),
+    contracts: lowercaseKeys(known<Address, boolean>(contracts)),
     newContacts: new Set(newContacts.filter((pair) => pair !== null)),
     contactPairs: pairs,
   };

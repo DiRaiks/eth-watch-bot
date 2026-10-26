@@ -31,9 +31,9 @@ export type Enrichment = {
   prices: Map<Address | null, number>;
   /** Outcome and fee of transactions, when the RPC answered */
   receipts?: Map<Hash, TxReceipt>;
-  /** Native balance of watched addresses after the block */
+  /** Native balance of watched addresses after the block, keyed in lowercase */
   balances?: Map<Address, bigint>;
-  /** Counterparties known to be contracts (true) or wallets (false) */
+  /** Counterparties known to be contracts (true) or wallets (false), keyed in lowercase */
   contracts?: Map<Address, boolean>;
   /** `owner:counterparty` pairs, lowercase, seen for the first time */
   newContacts?: Set<string>;
@@ -250,7 +250,8 @@ const describe = (
       `${activity.address.toLowerCase()}:${address.toLowerCase()}`,
     );
     const contract =
-      data.contracts?.get(address) === true && !knownName(chain, address);
+      data.contracts?.get(address.toLowerCase() as Address) === true &&
+      !knownName(chain, address);
     return html`${link(address)}${contract ? t.contractNote : ''}${isNew ? t.firstTimeNote : ''}`;
   };
   const usd = activityUsd(activity, data);
@@ -473,7 +474,7 @@ export const formatTx = (
   const paidFee =
     receipt && items.some(paysFee) ? t.fee(amount(receipt.fee)) : null;
   const balances = group.watches.flatMap((watch) => {
-    const balance = data.balances?.get(watch.address);
+    const balance = data.balances?.get(watch.address.toLowerCase() as Address);
     return balance === undefined
       ? []
       : [t.balance(several ? watchLabel(watch) : null, amount(balance))];
