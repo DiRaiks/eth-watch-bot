@@ -138,18 +138,49 @@ describe('what the alert tells about the transaction', () => {
     expect(again).toContain('🆕 впервые');
   });
 
-  it('asks the RPC nothing for incoming activity that waits for the digest', async () => {
+  it('asks only receipts of incoming ETH that waits for the digest', async () => {
     const t = await start();
     const asked: string[] = [];
     const reader = t.chain.reader;
     const getReceipt = reader.getReceipt!.bind(reader);
     reader.getReceipt = (hash) => {
-      asked.push(hash);
+      asked.push(`receipt ${hash}`);
       return getReceipt(hash);
+    };
+    reader.getBalance = async () => {
+      asked.push('balance');
+      return 0n;
+    };
+    reader.isContract = async () => {
+      asked.push('code');
+      return false;
     };
     await t.app.tg.bot.handleUpdate(callback('set:mode:digest', []));
     await mine(t, [tx(1, { from: BOB, to: ALICE, value: 10n ** 15n })]);
-    expect(asked).toEqual([]);
+    expect(asked).toEqual([`receipt ${txHash(1)}`]);
+  });
+
+  it('leaves a failed incoming transfer out of the digest', async () => {
+    const t = await start();
+    await t.app.tg.bot.handleUpdate(callback('set:mode:digest', []));
+    t.chain.setReceipt(txHash(1), { success: false, fee: 1n });
+    t.chain.setReceipt(txHash(2), { success: true, fee: 1n });
+    await mine(t, [
+      tx(1, { from: BOB, to: ALICE, value: 10n ** 15n }),
+      tx(2, { from: BOB, to: ALICE, value: 2n * 10n ** 15n }),
+    ]);
+    const entries = await t.stores.digests.take(10);
+    expect(entries.map((entry) => entry.hash)).toEqual([txHash(2)]);
+  });
+
+  it('says which watched address paid the fee when there are several', async () => {
+    const t = await start();
+    await t.app.tg.bot.handleUpdate(message(`/watch ${BOB} Bob`));
+    t.chain.setReceipt(txHash(1), { success: true, fee: 10n ** 13n });
+    const text = await mine(t, [
+      tx(1, { from: ALICE, to: BOB, value: 10n ** 15n }),
+    ]);
+    expect(text).toContain('⛽ Комиссия (Alice) 0.00001 ETH');
   });
 
   it('leaves the lines out when the RPC does not answer', async () => {
