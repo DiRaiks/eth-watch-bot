@@ -10,6 +10,7 @@ import {
   LANGUAGE_NAMES,
   LANGUAGES,
   t,
+  translations,
   withLanguage,
 } from '../i18n/index.js';
 import { canManage } from './commands.js';
@@ -186,7 +187,7 @@ export const registerSettings = (
 
   app.tg.command({
     command: 'settings',
-    description: t.settingsCommand,
+    description: translations((texts) => texts.settingsCommand),
     scope: 'chatAdmin',
     handler: (ctx) => {
       const { text, keyboard } = render(watches.prefs(ctx.chat!.id));

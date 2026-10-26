@@ -126,6 +126,34 @@ describe('language of a chat', () => {
     expect(alert).toContain('Отправлено');
   });
 
+  it("shows /start, /help and the command menu in the chat's language", async () => {
+    const t = await start();
+    await send(t, message('/help', { languageCode: 'en' }));
+    const help = String(t.api.texts().at(-1));
+    expect(help.startsWith('Commands:\n')).toBe(true);
+    expect(help).toContain('/help — List of commands');
+    expect(help).toContain('/watch — Watch an address');
+
+    await send(t, message('/help', { languageCode: 'de' }));
+    expect(String(t.api.texts().at(-1))).toContain('/help — Список команд');
+
+    // A language chosen in /settings wins over the user's Telegram one
+    await send(t, message('/settings'));
+    const keyboard = t.api.sent().at(-1)?.payload.reply_markup as {
+      inline_keyboard: { text: string; callback_data: string }[][];
+    };
+    await send(t, callback('set:lang:en', keyboard.inline_keyboard));
+    await send(t, message('/help', { languageCode: 'ru' }));
+    expect(String(t.api.texts().at(-1))).toContain('/help — List of commands');
+
+    const watch = t.app.tg.commands().find((c) => c.command === 'watch');
+    expect(watch?.description).toMatchObject({
+      default: 'Следить за адресом: /watch 0x… [метка]',
+      en: 'Watch an address: /watch 0x… [label]',
+      ru: 'Следить за адресом: /watch 0x… [метка]',
+    });
+  });
+
   it('reads only known languages from storage', () => {
     expect(readPrefs({ prefs: { language: 'en' } }).language).toBe('en');
     expect(readPrefs({ prefs: { language: 'de' } }).language).toBeUndefined();
