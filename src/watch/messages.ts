@@ -37,6 +37,8 @@ export type Enrichment = {
   contracts?: Map<Address, boolean>;
   /** `owner:counterparty` pairs, lowercase, seen for the first time */
   newContacts?: Set<string>;
+  /** Counterparties, lowercase, that look like a watched address or a contact */
+  lookalikes?: Map<string, Address>;
 };
 
 export const watchLabel = (watch: Watch) =>
@@ -227,9 +229,13 @@ export const activityLine = (
   data: Enrichment,
 ): Html => {
   const line = describe(chain, activity, data);
-  if (activity.spam !== 'fake-token') return line;
+  // A symbol dressed up as a popular ticker: name what it imitates
+  const imitates =
+    'token' in activity ? data.tokens.get(activity.token)?.imitates : undefined;
+  const fake = imitates ? t.imitationNote(imitates) : '';
+  if (activity.spam !== 'fake-token') return html`${line}${fake}`;
   // An alarming event from a token the address never held: say so instead of alarming
-  return html`${raw(line.value.replace(/^🚨/u, '⚠️'))}${t.fakeTokenNote}`;
+  return html`${raw(line.value.replace(/^🚨/u, '⚠️'))}${fake}${t.fakeTokenNote}`;
 };
 
 const describe = (
@@ -252,7 +258,8 @@ const describe = (
     const contract =
       data.contracts?.get(address.toLowerCase() as Address) === true &&
       !knownName(chain, address);
-    return html`${link(address)}${contract ? t.contractNote : ''}${isNew ? t.firstTimeNote : ''}`;
+    const original = data.lookalikes?.get(address.toLowerCase());
+    return html`${link(address)}${contract ? t.contractNote : ''}${isNew ? t.firstTimeNote : ''}${original ? t.lookalikeNote(link(original)) : ''}`;
   };
   const usd = activityUsd(activity, data);
 
@@ -316,10 +323,10 @@ const describe = (
         usd,
       );
       if (activity.spam === 'fake-transfer') {
-        return t.fakeTransfer(amount, link(activity.to));
+        return t.fakeTransfer(amount, party(activity.to));
       }
       if (activity.sentBy) {
-        return t.taken(amount, link(activity.to), link(activity.sentBy));
+        return t.taken(amount, party(activity.to), link(activity.sentBy));
       }
       return t.sent(amount, party(activity.to));
     }
@@ -340,7 +347,7 @@ const describe = (
     case 'send-nft': {
       const what = html`NFT ${tokenLink(chain, activity.token, data)} ${nftIds(activity.tokenIds, activity.amounts)}`;
       return activity.sentBy
-        ? t.nftTaken(what, link(activity.to), link(activity.sentBy))
+        ? t.nftTaken(what, party(activity.to), link(activity.sentBy))
         : t.nftSent(what, party(activity.to));
     }
     case 'receive-nft':

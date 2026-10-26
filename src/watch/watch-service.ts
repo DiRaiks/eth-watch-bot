@@ -244,6 +244,11 @@ export class WatchService {
       .map(([chatId, watch]) => ({ chatId, watch }));
   }
 
+  /** Every watched address, lowercase */
+  addresses(): string[] {
+    return [...this.index.keys()];
+  }
+
   /** Whether any chat watches the address, muted or not */
   isWatched(address: string) {
     return this.index.has(key(address));

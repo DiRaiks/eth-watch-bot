@@ -186,6 +186,9 @@ export const ru: Texts = {
     html`🚨 Разрешение: ${operator} может забрать <b>все</b> NFT коллекции ${token}`,
   approvalForAllRevoked: (token, operator) =>
     html`✅ Разрешение на коллекцию ${token} для ${operator} отозвано`,
+  imitationNote: (ticker) => ` · ⚠️ подделка под ${ticker}`,
+  lookalikeNote: (original) =>
+    html` · ⚠️ похож на ${original}, но это другой адрес: не копируйте его из истории`,
   fakeTokenNote:
     ' · ⚠️ у вас нет этого токена, похоже на подделку: ничего не пропало',
 

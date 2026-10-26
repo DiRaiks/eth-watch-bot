@@ -1,6 +1,8 @@
 import type { PgClientLike } from '@dirai/tg-kit';
 import type { Address } from 'viem';
 
+import { looksLike } from '../enrich/lookalike.js';
+
 /**
  * Who each watched address has sent to or approved, so a transfer to someone new stands
  * out: address poisoning relies on a look-alike the owner never paid before. Known since
@@ -9,6 +11,8 @@ import type { Address } from 'viem';
 export interface ContactStore {
   /** Whether the owner dealt with the counterparty before; reads only */
   isKnown(owner: Address, counterparty: Address): Promise<boolean>;
+  /** A counterparty of the owner that looks like this one in a wallet, if any */
+  similar(owner: Address, counterparty: Address): Promise<Address | null>;
   /** Records the pair; true when the owner had not dealt with the counterparty before */
   remember(owner: Address, counterparty: Address): Promise<boolean>;
 }
@@ -23,6 +27,16 @@ export const memoryContacts = (): ContactStore => {
   const seen = new Set<string>();
   return {
     isKnown: async (owner, counterparty) => seen.has(key(owner, counterparty)),
+    async similar(owner, counterparty) {
+      const prefix = `${owner.toLowerCase()}:`;
+      for (const pair of seen) {
+        const known = pair.slice(prefix.length);
+        if (pair.startsWith(prefix) && looksLike(known, counterparty)) {
+          return known as Address;
+        }
+      }
+      return null;
+    },
     async remember(owner, counterparty) {
       const pair = key(owner, counterparty);
       if (seen.has(pair)) return false;
@@ -49,6 +63,19 @@ export const pgContacts = async (sql: PgClientLike): Promise<ContactStore> => {
         [owner.toLowerCase(), counterparty.toLowerCase()],
       );
       return rows.length > 0;
+    },
+    async similar(owner, counterparty) {
+      const { rows } = await sql.query(
+        `SELECT counterparty FROM contacts
+         WHERE owner = $1 AND counterparty <> $2
+           AND left(counterparty, 6) = left($2, 6)
+           AND right(counterparty, 4) = right($2, 4)
+         LIMIT 1`,
+        [owner.toLowerCase(), counterparty.toLowerCase()],
+      );
+      return (
+        (rows[0] as { counterparty: Address } | undefined)?.counterparty ?? null
+      );
     },
     async remember(owner, counterparty) {
       const { rows } = await sql.query(

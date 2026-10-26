@@ -129,6 +129,9 @@ export const fakeChain = (chainId = 1) => {
     setBalance(token: Address, owner: Address, balance: bigint | null) {
       balances.set(`${token.toLowerCase()}:${owner.toLowerCase()}`, balance);
     },
+    setToken(token: Address, info: TokenInfo) {
+      tokens.set(token, info);
+    },
     setReceipt(hash: Hash, receipt: TxReceipt) {
       receipts.set(hash, receipt);
     },

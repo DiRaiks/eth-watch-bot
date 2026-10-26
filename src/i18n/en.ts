@@ -220,6 +220,9 @@ export const en = {
     html`🚨 Approval: ${operator} can take <b>all</b> NFTs of the ${token} collection`,
   approvalForAllRevoked: (token: Html, operator: Html) =>
     html`✅ Approval of the ${token} collection for ${operator} revoked`,
+  imitationNote: (ticker: string) => ` · ⚠️ a fake ${ticker}`,
+  lookalikeNote: (original: Html) =>
+    html` · ⚠️ looks like ${original} but is another address: do not copy it from your history`,
   fakeTokenNote:
     ' · ⚠️ you do not hold this token, likely a forgery: nothing was lost',
 
