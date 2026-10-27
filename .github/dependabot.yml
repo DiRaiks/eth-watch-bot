@@ -23,6 +23,13 @@ updates:
     versioning-strategy: increase
     cooldown:
       default-days: 7
+    ignore:
+      # TypeScript 7 waits for typescript-eslint support
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Types follow the Node LTS the services run on, not the newest Node
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
@@ -37,6 +44,10 @@ updates:
     multi-ecosystem-group: dependencies
     cooldown:
       default-days: 7
+    ignore:
+      # Node LTS only: moving to the next one is a deliberate upgrade
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker-compose
     directory: /deploy
@@ -44,3 +55,7 @@ updates:
     multi-ecosystem-group: dependencies
     cooldown:
       default-days: 7
+    ignore:
+      # A new Postgres major needs a dump and restore of the data
+      - dependency-name: postgres
+        update-types: ['version-update:semver-major']
