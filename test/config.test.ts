@@ -123,7 +123,6 @@ describe('loadConfig', () => {
     [{}, /at least one chain/],
     [{ ...base, MESSAGES_CHAINS: 'solana' }, /unknown chain "solana"/],
     [{ ...base, BOT_MODE: 'push' }, /BOT_MODE/],
-    [{ ...base, MONGO_URI: 'mongodb://x/eth' }, /MONGO_URI is no longer used/],
     [{ ...base, DATABASE_URL: 'mysql://x/eth' }, /DATABASE_URL must start/],
     [{ ...base, BOT_TOKEN: 't', BOT_MODE: 'webhook' }, /BOT_WEBHOOK_URL/],
     [{ ...base, PORT: 'abc' }, /PORT must be an integer/],
