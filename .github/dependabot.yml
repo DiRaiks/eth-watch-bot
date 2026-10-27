@@ -1,5 +1,5 @@
 # Dependency updates: every ecosystem below goes into one weekly PR (multi-ecosystem
-# group). Versions younger than two weeks are skipped (cooldown); security updates
+# group). Versions younger than a week are skipped (cooldown); security updates
 # come at once, in their own PRs.
 version: 2
 
@@ -19,7 +19,7 @@ updates:
     multi-ecosystem-group: dependencies
     versioning-strategy: increase
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
@@ -29,7 +29,7 @@ updates:
     patterns: ['*']
     multi-ecosystem-group: dependencies
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
@@ -39,7 +39,7 @@ updates:
     patterns: ['*']
     multi-ecosystem-group: dependencies
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
@@ -49,7 +49,7 @@ updates:
     patterns: ['*']
     multi-ecosystem-group: dependencies
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
