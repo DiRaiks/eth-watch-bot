@@ -45,9 +45,10 @@ updates:
     cooldown:
       default-days: 7
     ignore:
-      # Node LTS only: moving to the next one is a deliberate upgrade
+      # Node LTS only: moving to the next one is a deliberate upgrade. By versions, as
+      # Dependabot does not count 24-alpine → 25-alpine as a major update
       - dependency-name: node
-        update-types: ['version-update:semver-major']
+        versions: ['>=25']
 
   - package-ecosystem: docker-compose
     directory: /deploy
@@ -58,4 +59,4 @@ updates:
     ignore:
       # A new Postgres major needs a dump and restore of the data
       - dependency-name: postgres
-        update-types: ['version-update:semver-major']
+        versions: ['>=19']
