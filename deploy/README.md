@@ -10,7 +10,9 @@ One VPS runs the bot with Docker Compose:
 
 A polling bot needs neither Caddy nor an open port. Add the `web` profile for webhook mode or to publish `GET /v1/messages`.
 
-After CI passes on `main`, the deploy workflow builds the image, tags it with the commit SHA and `latest`, and pushes it to GHCR. When the server is configured, the workflow uploads `compose.yml` and `Caddyfile`, pulls the new image, restarts the stack and waits for the health check. A failed CI run deploys nothing, and the deploy builds the exact commit CI tested. Until the server is configured the deploy job is skipped, so pushes stay green.
+The Postgres services come from dirai-kit's shared fragment `postgres.compose.yml`, which `compose.yml` includes; [`postgres.env`](postgres.env) keeps the names of the first deploys (user and database `eth_watch`, dumps `eth-watch-*.dump`), so the existing volume `eth-watch-bot_postgres_data` and old backups keep working.
+
+After CI passes on `main`, the deploy workflow calls dirai-kit's shared deploy workflow (pinned to a commit): it builds the image, tags it with the commit SHA and `latest`, and pushes it to GHCR. When the server is configured, it uploads `compose.yml`, `Caddyfile`, `postgres.env` and `postgres.compose.yml`, pulls the new image, restarts the stack and waits for the health check of `bot`. A failed CI run deploys nothing, and the deploy builds the exact commit CI tested. Until the server is configured only the image is built, so pushes stay green.
 
 ## First deployment
 
@@ -47,7 +49,7 @@ Settings → Environments → **production**, the secrets:
 | `VPS_SSH_KEY` | Private key `~/.ssh/eth-watch-bot-deploy` |
 | `VPS_PORT`    | Only if SSH is not on port 22             |
 
-Settings → Secrets and variables → Actions → **Variables**, a repository variable: `DEPLOY_PATH` = `/opt/eth-watch-bot`. Setting it enables the deploy job. It must be a repository variable, not one of the `production` environment: the job's `if` is evaluated before the environment is attached, so an environment variable leaves the job skipped forever.
+Settings → Secrets and variables → Actions → **Variables**, a repository variable: `DEPLOY_PATH` = `/opt/eth-watch-bot`. Setting it enables the deploy job. It must be a repository variable, not one of the `production` environment: the workflow passes it to the shared one before the environment is attached, so an environment variable leaves the deploy skipped forever.
 
 The server logs in to GHCR with the workflow's short-lived token; nothing else to register.
 

@@ -1,4 +1,5 @@
-import pg from 'pg';
+import { closeOnSignals, loggerOptions } from '@dirai-kit/fastify';
+import { createPool } from '@dirai-kit/pg';
 import { createPublicClient, type PublicClient } from 'viem';
 import { normalize } from 'viem/ens';
 
@@ -53,8 +54,15 @@ for (const chain of config.chains) {
   readers[chain.name] = viemReader(client, rpc.current);
 }
 
+// A dropped idle connection: the pool reconnects; reported once the logger exists
+let onIdleError = (error: Error) =>
+  console.error('database connection lost', error);
 const db = config.databaseUrl
-  ? new pg.Pool({ connectionString: config.databaseUrl, max: 5 })
+  ? createPool({
+      url: config.databaseUrl,
+      max: 5,
+      onIdleError: (error) => onIdleError(error),
+    })
   : null;
 const stores = db ? await pgStores(db) : memoryStores();
 
@@ -66,13 +74,12 @@ const { app } = await buildApp({
   resolveName: ethereum
     ? (name) => ethereum.getEnsAddress({ name: normalize(name) })
     : undefined,
-  logger: {
+  logger: loggerOptions({
     level: config.logLevel,
-    transport:
-      process.env.NODE_ENV === 'production'
-        ? undefined
-        : { target: 'pino-pretty' },
-  },
+    pretty: process.env.NODE_ENV !== 'production',
+  }),
+  // After the scanners and the bot have stopped
+  onClose: db ? () => db.end() : undefined,
 });
 
 for (const { chain, host, chainId } of rpcWarnings) {
@@ -82,10 +89,8 @@ for (const { chain, host, chainId } of rpcWarnings) {
   );
 }
 
-// A dropped idle connection: the pool reconnects; without a listener it would crash
-db?.on('error', (error) =>
-  app.log.error({ err: error }, 'database connection lost'),
-);
+onIdleError = (error) =>
+  app.log.error({ err: error }, 'database connection lost');
 
 if (!db) {
   app.log.warn(
@@ -93,20 +98,7 @@ if (!db) {
   );
 }
 
-const shutdown = async (signal: string) => {
-  app.log.info({ signal }, 'shutting down');
-  // Docker kills the container after 10 s anyway; exit cleanly before that
-  setTimeout(() => process.exit(1), 8000).unref();
-  try {
-    await app.close();
-    await db?.end();
-    process.exit(0);
-  } catch (error) {
-    app.log.error({ err: error }, 'shutdown failed');
-    process.exit(1);
-  }
-};
-process.once('SIGINT', () => void shutdown('SIGINT'));
-process.once('SIGTERM', () => void shutdown('SIGTERM'));
+// Docker kills the container after 10 s anyway; exit cleanly before that
+closeOnSignals(app, { timeoutMs: 8000 });
 
 await app.listen({ port: config.port, host: config.host });

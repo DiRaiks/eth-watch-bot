@@ -158,7 +158,7 @@ curl 'http://localhost:3000/v1/messages?limit=5'
 
 ## Deploy
 
-One VPS with Docker Compose: the bot, plus optional Caddy for HTTPS (webhook and public API) and an optional local Postgres with daily backups. After CI passes on `main`, the image is built and pushed to GHCR; the deploy step stays skipped until the server is configured. See [deploy/README.md](deploy/README.md).
+One VPS with Docker Compose: the bot, plus optional Caddy for HTTPS (webhook and public API) and an optional local Postgres with daily backups. After CI passes on `main`, dirai-kit's shared deploy workflow builds the image, pushes it to GHCR and restarts the stack; the Postgres services come from its shared compose fragment. The deploy step stays skipped until the server is configured. See [deploy/README.md](deploy/README.md).
 
 ## Development
 

@@ -2,6 +2,15 @@
 # the deploy workflow uploads this directory and sets the image tag in images.env.
 name: eth-watch-bot
 
+# Optional local Postgres with daily backups (COMPOSE_PROFILES=postgres): the services
+# `postgres` and `postgres-backup` from dirai-kit's fragment, which the deploy workflow
+# uploads next to this file. postgres.env keeps the names of the first deploys: user and
+# database eth_watch, dumps eth-watch-*.dump. Set POSTGRES_PASSWORD in .env, and
+# DATABASE_URL=postgres://eth_watch:<POSTGRES_PASSWORD>@postgres:5432/eth_watch
+include:
+  - path: postgres.compose.yml
+    env_file: [.env, postgres.env]
+
 x-logging: &logging
   driver: json-file
   options:
@@ -43,78 +52,6 @@ services:
       - bot
     logging: *logging
 
-  # Optional local Postgres (COMPOSE_PROFILES=postgres): set POSTGRES_PASSWORD, and
-  # DATABASE_URL=postgres://eth_watch:<POSTGRES_PASSWORD>@postgres:5432/eth_watch
-  postgres:
-    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
-    profiles: [postgres]
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: eth_watch
-      POSTGRES_DB: eth_watch
-      # The image refuses to start without it
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
-    volumes:
-      # Postgres 18 keeps its data under /var/lib/postgresql/<version>
-      - postgres_data:/var/lib/postgresql
-    healthcheck:
-      # Over TCP: on first start the image runs a socket-only server to initialise the
-      # database, which must not count as ready
-      test:
-        [
-          'CMD',
-          'pg_isready',
-          '-h',
-          '127.0.0.1',
-          '-U',
-          'eth_watch',
-          '-d',
-          'eth_watch',
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
-    logging: *logging
-
-  # Daily dump of the database to ./backups, keeps BACKUP_KEEP_DAYS
-  postgres-backup:
-    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
-    profiles: [postgres]
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
-      PGHOST: postgres
-      PGUSER: eth_watch
-      PGDATABASE: eth_watch
-      PGPASSWORD: ${POSTGRES_PASSWORD:-}
-    volumes:
-      - ./backups:/backup
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        while true; do
-          file="/backup/eth-watch-$$(date -u +%Y%m%dT%H%M%SZ).dump"
-          if pg_dump --format=custom --file="$$file"; then
-            echo "backup written: $$file"
-            wait=86400
-          else
-            rm -f "$$file"
-            # e.g. Postgres restarting: try again soon instead of in a day
-            echo "backup failed, retrying in 5 minutes" >&2
-            wait=300
-          fi
-          find /backup -name 'eth-watch-*.dump' -mtime +"$$BACKUP_KEEP_DAYS" -delete
-          sleep "$$wait"
-        done
-    logging: *logging
-
 volumes:
   caddy_data:
   caddy_config:
-  postgres_data:

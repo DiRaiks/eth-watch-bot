@@ -1,4 +1,4 @@
-import type { MetricsRegistry } from '@dirai-kit/tg';
+import type { HealthReport } from '@dirai-kit/fastify/ops';
 import type { FastifyInstance } from 'fastify';
 
 import { txUrl } from './chains.js';
@@ -8,25 +8,25 @@ import type { BlockScanner } from './scanner/scanner.js';
 /** Scanner lag that marks the service as degraded */
 const MAX_HEALTHY_LAG = 100;
 
-export const registerRoutes = (
-  app: FastifyInstance,
-  {
-    scanners,
-    messages,
-    metrics,
-    telegram,
-  }: {
-    scanners: BlockScanner[];
-    messages: MessageStore;
-    metrics: MetricsRegistry;
-    /** Whether the bot talks to Telegram (a token is set) */
-    telegram: boolean;
-  },
-) => {
-  // Always 200 while the process runs: an RPC or Telegram outage should not restart
-  // the container; the status says what is wrong
-  app.get('/health', async () => {
-    const chains = scanners.map((scanner) => scanner.status());
+/**
+ * The report of /health (served by the ops plugin, always with 200 while the process
+ * runs: an RPC or Telegram outage should not restart the container; the status says
+ * what is wrong). /metrics is not routed by the public proxy (deploy/Caddyfile).
+ */
+export const healthReport =
+  (
+    app: FastifyInstance,
+    {
+      scanners,
+      telegram,
+    }: {
+      scanners: () => BlockScanner[];
+      /** Whether the bot talks to Telegram (a token is set) */
+      telegram: boolean;
+    },
+  ) =>
+  async (): Promise<HealthReport> => {
+    const chains = scanners().map((scanner) => scanner.status());
     const bot = telegram ? await app.tgHealth.check() : null;
     const degraded =
       chains.some(
@@ -34,13 +34,12 @@ export const registerRoutes = (
       ) ||
       (bot !== null && !bot.ok);
     return { status: degraded ? 'degraded' : 'ok', chains, telegram: bot };
-  });
+  };
 
-  // Not routed by the public proxy (deploy/Caddyfile): scrape it inside the network
-  app.get('/metrics', async (_request, reply) =>
-    reply.type(metrics.contentType).send(await metrics.metrics()),
-  );
-
+export const registerRoutes = (
+  app: FastifyInstance,
+  { messages }: { messages: MessageStore },
+) => {
   app.get<{ Querystring: { limit: number } }>(
     '/v1/messages',
     {

@@ -224,7 +224,9 @@ export const buildTestApp = async ({
   methods,
   prices = null,
   now,
+  onClose,
 }: {
+  onClose?: () => Promise<unknown>;
   methods?: SignatureLookup;
   prices?: PriceLookup | null;
   now?: () => number;
@@ -243,6 +245,7 @@ export const buildTestApp = async ({
     methods,
     prices,
     now,
+    onClose,
     logger: false,
     startScanners: false,
     bot: { mode: 'none', botInfo: BOT_INFO, configureApi: api.configureApi },

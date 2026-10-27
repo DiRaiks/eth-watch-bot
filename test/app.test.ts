@@ -517,9 +517,7 @@ describe('status and health', () => {
     let up = true;
     const stores = {
       ...memoryStores(),
-      ping: async () => {
-        if (!up) throw new Error('down');
-      },
+      ping: async () => up,
     };
     const t = await start({ stores });
     await send(t, message('/health', { userId: ADMIN_ID }));
@@ -608,6 +606,20 @@ describe('status and health', () => {
 });
 
 describe('startup', () => {
+  it('runs onClose last, after the scanners have stopped', async () => {
+    const order: string[] = [];
+    const t = await buildTestApp({
+      onClose: async () => order.push('database'),
+    });
+    const close = t.scanner.close.bind(t.scanner);
+    t.scanner.close = async () => {
+      order.push('scanner');
+      await close();
+    };
+    await t.app.close();
+    expect(order).toEqual(['scanner', 'database']);
+  });
+
   it('sets up the default channel of the old bots', async () => {
     const stores = memoryStores();
     await start({
