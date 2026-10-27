@@ -1,4 +1,4 @@
-import { joinHtml, type Html } from '@dirai/tg-kit';
+import { joinHtml, type Html } from '@dirai-kit/tg';
 import type { FastifyInstance } from 'fastify';
 import { InlineKeyboard, type Context } from 'grammy';
 

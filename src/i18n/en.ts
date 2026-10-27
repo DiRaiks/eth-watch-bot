@@ -1,4 +1,4 @@
-import { html, type Html } from '@dirai/tg-kit';
+import { html, type Html } from '@dirai-kit/tg';
 
 /** A piece of a message: escaped text or ready markup */
 type Part = Html | string;

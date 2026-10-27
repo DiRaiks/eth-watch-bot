@@ -1,4 +1,4 @@
-import { memoryStore } from '@dirai/tg-kit';
+import { memoryStore } from '@dirai-kit/tg';
 import { describe, expect, it } from 'vitest';
 
 import { normalizeAddress, WatchService } from '../src/watch/watch-service.js';

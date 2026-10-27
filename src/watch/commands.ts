@@ -1,4 +1,4 @@
-import { html, joinHtml } from '@dirai/tg-kit';
+import { html, joinHtml } from '@dirai-kit/tg';
 import type { FastifyInstance } from 'fastify';
 import type { Context } from 'grammy';
 import type { InlineKeyboardButton } from 'grammy/types';

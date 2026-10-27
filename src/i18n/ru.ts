@@ -1,4 +1,4 @@
-import { html } from '@dirai/tg-kit';
+import { html } from '@dirai-kit/tg';
 
 import type { Texts } from './en.js';
 

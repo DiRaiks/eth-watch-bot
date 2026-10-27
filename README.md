@@ -7,7 +7,7 @@ Ethereum, Base, Arbitrum and Optimism.
 
 [![CI](https://github.com/DiRaiks/eth-watch-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/DiRaiks/eth-watch-bot/actions/workflows/ci.yml)
 [![node](https://img.shields.io/badge/node-24%2B-339933?logo=nodedotjs&logoColor=white)](package.json)
-[![built with tg-kit](https://img.shields.io/badge/built%20with-%40dirai%2Ftg--kit-26a5e4?logo=telegram&logoColor=white)](https://github.com/DiRaiks/tg-bot-kit)
+[![built with tg-kit](https://img.shields.io/badge/built%20with-%40dirai--kit%2Ftg-26a5e4?logo=telegram&logoColor=white)](https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg)
 [![viem](https://img.shields.io/badge/viem-2-ffc517)](https://viem.sh)
 
 </div>
@@ -71,7 +71,7 @@ flowchart LR
     watch["address-watch<br/><sub>txs, token transfers, approvals;<br/>chat settings, digest</sub>"]
     enrich["enrichment<br/><sub>method names, USD prices,<br/>receipts, balances, contracts</sub>"]
     messages["block-messages<br/><sub>UTF-8 text in tx input</sub>"]
-    kit["@dirai/tg-kit<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
+    kit["@dirai-kit/tg<br/><sub>commands, subscriptions,<br/>rate-limited notifier</sub>"]
     api["Fastify<br/><sub>/v1/messages, /health, /metrics</sub>"]
   end
   db[("Postgres<br/><sub>chats, checkpoints, messages,<br/>digests, contacts</sub>")]
@@ -91,7 +91,7 @@ Transactions sent for you by a relayer, a smart account or a Safe (CoW Swap and 
 
 What the bot cannot see: ETH moved by a contract on your behalf (internal transactions) appears only through the call that caused it, and Permit2 allowances show up as the approval to Permit2 plus the transfers they lead to.
 
-Chats and their watched addresses are stored by [@dirai/tg-kit](https://github.com/DiRaiks/tg-bot-kit)'s subscription store; the bot keeps an in-memory index by address so every transaction is a map lookup. When no chat watches anything and no chain is searched for messages, scanners skip ahead without downloading blocks.
+Chats and their watched addresses are stored by [@dirai-kit/tg](https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg)'s subscription store; the bot keeps an in-memory index by address so every transaction is a map lookup. When no chat watches anything and no chain is searched for messages, scanners skip ahead without downloading blocks.
 
 ## Run locally
 
