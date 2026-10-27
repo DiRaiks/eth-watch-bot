@@ -1,9 +1,4 @@
-import {
-  collectDefaultMetrics,
-  Counter,
-  Gauge,
-  Registry,
-} from '@prometheus-io/client';
+import { Counter, Gauge, type Registry } from '@prometheus-io/client';
 
 import type { ChainName } from './chains.js';
 import type { BlockScanner } from './scanner/scanner.js';
@@ -13,12 +8,13 @@ export type Metrics = ReturnType<typeof createMetrics>;
 
 /**
  * Prometheus metrics of the bot: scanner progress per chain (read at scrape time),
- * alerts sent by importance, messages found in blocks, and Node.js process metrics.
- * The kit adds Telegram metrics (tg_*) to the same registry.
+ * alerts sent by importance and messages found in blocks, on the registry of /metrics
+ * (the ops plugin adds Node.js process metrics, the kit Telegram metrics, tg_*).
  */
-export const createMetrics = (scanners: () => BlockScanner[]) => {
-  const registry = new Registry();
-  collectDefaultMetrics({ register: registry });
+export const createMetrics = (
+  registry: Registry,
+  scanners: () => BlockScanner[],
+) => {
   const registers = [registry];
 
   const perChain = (
@@ -78,7 +74,6 @@ export const createMetrics = (scanners: () => BlockScanner[]) => {
   let found = 0;
 
   return {
-    registry,
     notificationSent: (chain: ChainName, importance: Importance) => {
       sent[importance] += 1;
       alerts.inc({ chain, importance });

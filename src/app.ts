@@ -1,5 +1,7 @@
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import { parseTrustProxy } from '@dirai-kit/fastify';
+import { ops } from '@dirai-kit/fastify/ops';
 import {
   tgBot,
   tgHealth,
@@ -18,7 +20,7 @@ import type { Context } from 'grammy';
 import { CHAINS, type ChainName } from './chains.js';
 import { registerCommands } from './commands.js';
 import type { Config } from './config.js';
-import { registerRoutes } from './http.js';
+import { healthReport, registerRoutes } from './http.js';
 import { createMetrics } from './metrics.js';
 import {
   languageOf,
@@ -53,6 +55,8 @@ export type AppOptions = {
   prices?: PriceLookup | null;
   /** Starts the scanners and the digest on ready (default true); tests drive them by hand */
   startScanners?: boolean;
+  /** Runs last on close, after the scanners and the bot: e.g. ends the database pool */
+  onClose?: () => Promise<unknown>;
   now?: () => number;
 };
 
@@ -62,11 +66,11 @@ export const buildApp = async (options: AppOptions) => {
   const app = Fastify({
     logger: options.logger ?? { level: config.logLevel },
     // Trust X-Forwarded-For only from the configured number of proxy hops
-    trustProxy:
-      config.trustProxy === false
-        ? false
-        : (_address: string, hop: number) => hop < Number(config.trustProxy),
+    trustProxy: parseTrustProxy(String(config.trustProxy)),
   });
+  // onClose hooks run in reverse order: the first one added runs last
+  const { onClose } = options;
+  if (onClose) app.addHook('onClose', async () => void (await onClose()));
 
   const telegram = Boolean(config.bot.token);
   if (!telegram) {
@@ -116,11 +120,16 @@ export const buildApp = async (options: AppOptions) => {
   });
   await app.register(tgNotifier, options.notifier ?? {});
 
-  // One registry for the bot and the kit; /metrics and /health are the bot's own routes
+  // One registry for the bot and the kit, served on /metrics; /health is the bot's report
   let scanners: BlockScanner[] = [];
-  const metrics = createMetrics(() => scanners);
+  await app.register(ops, {
+    // Only the metrics the bot has always had
+    httpMetrics: false,
+    health: healthReport(app, { scanners: () => scanners, telegram }),
+  });
+  const metrics = createMetrics(app.ops.registry, () => scanners);
   await app.register(tgHealth, {
-    registry: metrics.registry,
+    registry: app.ops.registry,
     healthPath: false,
     metricsPath: false,
   });
@@ -239,12 +248,7 @@ export const buildApp = async (options: AppOptions) => {
     ...(stores.ping && { ping: stores.ping }),
     totals: metrics.totals,
   });
-  registerRoutes(app, {
-    scanners,
-    messages: stores.messages,
-    metrics: metrics.registry,
-    telegram,
-  });
+  registerRoutes(app, { messages: stores.messages });
 
   app.addHook('onReady', async () => {
     await bootstrapChat(app, watches, config.bootstrap);

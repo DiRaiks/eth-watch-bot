@@ -4,6 +4,7 @@ import {
   type PgClientLike,
   type SubscriptionStore,
 } from '@dirai-kit/tg';
+import { ping } from '@dirai-kit/pg';
 import type { Address, Hash } from 'viem';
 
 import type { ChainName } from './chains.js';
@@ -17,8 +18,8 @@ import {
 import { memoryDigests, pgDigests, type DigestStore } from './watch/digest.js';
 
 export type Stores = {
-  /** Answers when the database is up; absent for memory stores */
-  ping?: () => Promise<void>;
+  /** Whether the database answers in time; absent for memory stores */
+  ping?: () => Promise<boolean>;
   chats: SubscriptionStore;
   contacts: ContactStore;
   checkpoints: CheckpointStore;
@@ -121,9 +122,7 @@ export const pgStores = async (sql: Sql): Promise<Stores> => {
   };
 
   return {
-    ping: async () => {
-      await sql.query('SELECT 1');
-    },
+    ping: () => ping(sql),
     chats: pgStore(sql, { table: 'chats' }),
     digests,
     contacts,

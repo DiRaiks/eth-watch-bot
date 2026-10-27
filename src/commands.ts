@@ -41,7 +41,7 @@ export const registerCommands = (
     /** False when no chain is searched for messages */
     messagesEnabled: boolean;
     /** Database check; absent when everything is kept in memory */
-    ping?: () => Promise<void>;
+    ping?: () => Promise<boolean>;
     /** Notifications and block messages since the start */
     totals: () => {
       sent: Record<'alert' | 'outgoing' | 'incoming', number>;
@@ -104,12 +104,11 @@ export const registerCommands = (
     scope: 'admin',
     handler: async (ctx) => {
       const started = performance.now();
-      const database = ping
-        ? await ping().then(
-            () => t.healthDb(Math.round(performance.now() - started)),
-            () => t.healthDbDown,
-          )
-        : t.healthDbMemory;
+      const database = !ping
+        ? t.healthDbMemory
+        : (await ping())
+          ? t.healthDb(Math.round(performance.now() - started))
+          : t.healthDbDown;
       const telegram = await app.tgHealth.check();
       const { sent, found } = totals();
       return replyHtml(
