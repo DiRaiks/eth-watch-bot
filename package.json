@@ -33,7 +33,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
-    "@electric-sql/pglite": "0.5.9",
+    "@electric-sql/pglite": "0.5.10",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
