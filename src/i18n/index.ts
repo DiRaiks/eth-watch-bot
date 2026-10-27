@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { Translations } from '@dirai/tg-kit';
+import type { Translations } from '@dirai-kit/tg';
 
 import { en, type Texts } from './en.js';
 import { ru } from './ru.js';

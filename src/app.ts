@@ -8,7 +8,7 @@ import {
   type Html,
   type TgBotOptions,
   type TgNotifierOptions,
-} from '@dirai/tg-kit';
+} from '@dirai-kit/tg';
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,

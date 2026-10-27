@@ -1,4 +1,4 @@
-import type { PgClientLike } from '@dirai/tg-kit';
+import type { PgClientLike } from '@dirai-kit/tg';
 import type { Address } from 'viem';
 
 import { looksLike } from '../enrich/lookalike.js';

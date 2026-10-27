@@ -1,4 +1,4 @@
-import type { Html, SendOptions } from '@dirai/tg-kit';
+import type { Html, SendOptions } from '@dirai-kit/tg';
 import type { FastifyBaseLogger } from 'fastify';
 import { InlineKeyboard } from 'grammy';
 import type { Address, Hash, Hex } from 'viem';

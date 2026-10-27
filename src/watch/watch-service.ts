@@ -1,4 +1,4 @@
-import type { SubscriptionStore } from '@dirai/tg-kit';
+import type { SubscriptionStore } from '@dirai-kit/tg';
 import { getAddress, isAddress, type Address } from 'viem';
 
 import { DEFAULT_PREFS, readPrefs, type ChatPrefs } from './prefs.js';

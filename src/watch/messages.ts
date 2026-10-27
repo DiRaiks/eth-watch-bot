@@ -1,4 +1,4 @@
-import { html, joinHtml, raw, type Html } from '@dirai/tg-kit';
+import { html, joinHtml, raw, type Html } from '@dirai-kit/tg';
 import type { Address, Hash, Hex } from 'viem';
 
 import { addressUrl, CHAINS, type ChainName } from '../chains.js';

@@ -1,4 +1,4 @@
-import { html, type Html } from '@dirai/tg-kit';
+import { html, type Html } from '@dirai-kit/tg';
 import type { Context } from 'grammy';
 import { formatUnits } from 'viem';
 

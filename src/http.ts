@@ -1,4 +1,4 @@
-import type { MetricsRegistry } from '@dirai/tg-kit';
+import type { MetricsRegistry } from '@dirai-kit/tg';
 import type { FastifyInstance } from 'fastify';
 
 import { txUrl } from './chains.js';

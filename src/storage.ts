@@ -3,7 +3,7 @@ import {
   pgStore,
   type PgClientLike,
   type SubscriptionStore,
-} from '@dirai/tg-kit';
+} from '@dirai-kit/tg';
 import type { Address, Hash } from 'viem';
 
 import type { ChainName } from './chains.js';

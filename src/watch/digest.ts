@@ -1,4 +1,4 @@
-import { html, joinHtml, type Html } from '@dirai/tg-kit';
+import { html, joinHtml, type Html } from '@dirai-kit/tg';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Address, Hash } from 'viem';
 
