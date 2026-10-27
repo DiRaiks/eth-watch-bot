@@ -98,12 +98,6 @@ const boolean = (env: Env, key: string, fallback: boolean) => {
 
 const databaseUrl = (env: Env) => {
   const url = text(env, 'DATABASE_URL');
-  // A server still configured for MongoDB must not start quietly with memory only
-  if (!url && text(env, 'MONGO_URI')) {
-    throw new ConfigError(
-      'MONGO_URI is no longer used: the bot stores its data in Postgres, set DATABASE_URL',
-    );
-  }
   if (url && !/^postgres(ql)?:\/\//.test(url)) {
     throw new ConfigError(
       'DATABASE_URL must start with postgres:// or postgresql://',
